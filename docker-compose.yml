@@ -1,0 +1,35 @@
+# Local full stack: PostgreSQL + API + web client
+#   docker compose up --build
+# then open http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fuel
+      POSTGRES_PASSWORD: fuel
+      POSTGRES_DB: fuel_move
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuel -d fuel_move"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://fuel:fuel@db:5432/fuel_move
+      JWT_SECRET: local-docker-secret-change-me-0123456789
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

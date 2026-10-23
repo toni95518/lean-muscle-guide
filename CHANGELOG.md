@@ -1,0 +1,35 @@
+# Changelog
+
+## 0.3.1 (2026-10-23)
+
+- Water is shown in liters. One tap is a 250 ml glass, set by `GLASS_ML` in `web/index.html`. The Today card, Trends and the water goal (entered in liters, 0.25–5 L) all use liters. Stored data is unchanged: the app still saves glass counts.
+
+## 0.3.0 (2026-10-23)
+
+- Renamed the app to **薄肌理论指南**. Chinese-language phones see the Chinese name, and everyone else sees **Lean Muscle Theory Guide**, including the browser tab and the Home Screen name.
+- Added **Quick add**: log calories eaten (with optional protein, carbs and fat) or calories burned directly, without picking a food or activity. Exercise minutes are now optional.
+- Added **Ask your AI**: copy a prompt (in Chinese or English), send it with a food photo to your own AI app, paste the reply back, review and edit each item, and log them all at once.
+- Added API endpoints: `GET /api/ai/food-prompt`, `POST /api/ai/parse-food` and `POST /api/days/:date/food/batch`.
+- Entries now record `quick` and `ai` as their source, and the Today screen tags them. This needs migration `0001`, which runs automatically on start.
+- Added 9 tests (38 in total).
+
+## 0.2.1 (2026-10-22)
+
+- Fixed: opening the app from a phone over Wi‑Fi (plain HTTP on a local network) failed to sign in. The server no longer forces HTTPS upgrades, and it sends HSTS only in production.
+
+## 0.2.0 (2026-10-21)
+
+The app is now a full-stack project.
+
+- Added a Node.js + Express + TypeScript REST API with a PostgreSQL database (Drizzle ORM, SQL migrations).
+- Added accounts: email/password sign-up and sign-in with JWT, plus a WeChat Mini Program login endpoint.
+- Moved the food and activity libraries into the database, and added saved custom foods.
+- Moved the weekly summary to the server, including averages, logging streak and weight trend.
+- Added 斤 (jin) as a weight unit, and an lb / kg / 斤 switch on the weight card.
+- Added device token storage for future push reminders.
+- Connected the web client to the API: added a sign-in screen and a sync status indicator, and data now syncs across devices.
+- Added 29 unit and API tests, a Dockerfile, Docker Compose and a GitHub Actions CI workflow.
+
+## 0.1.0 (2026-10-20)
+
+- First version: a single-page web app with food, exercise, water and weight logging, macro targets, and 7-day trends. Data was stored in browser storage.
