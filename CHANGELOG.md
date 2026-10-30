@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0 (2026-10-30) — first public release
+
+- **Live:** Android APK through EAS Build (internal distribution link), and a web version for iPhone and any browser at https://lean-muscle-guide.expo.app (EAS Hosting).
+- **Nutrient tracking:** users pick any of 15 nutrients (sodium, sugar, saturated fat, cholesterol, fiber, potassium, calcium, iron, magnesium, zinc, vitamins A, C, D, B12, folate). The AI estimates them per food; Today shows bars against FDA Daily Value defaults or the user's own targets; Quick add and Coach include them.
+- **AI fixes:** OpenAI's newer models get `max_completion_tokens` and no custom temperature; Gemini and OpenAI get more room for hidden reasoning; replies cut off at the limit are retried once with more room; unreadable replies are logged in the Expo terminal.
+- Splash screen moved to the `expo-splash-screen` config plugin (required by SDK 58). Expo Doctor: 20/20 checks pass.
+
 ## 0.99.0 (2026-10-28) — test build before release
 
 - Added the **phone app** (`mobile/`, Expo SDK 58) for iPhone and Android. It's local-first: everything is stored on the phone and no account is needed.
