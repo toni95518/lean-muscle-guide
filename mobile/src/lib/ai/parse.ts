@@ -2,6 +2,7 @@
 // the JSON, smart quotes, unit strings ("520 kcal", "约520千卡") and common key names
 // in English, Chinese, French and German. (Same approach as server/src/lib/aiFood.ts.)
 import { isDateKey } from "../dates";
+import { readMicros } from "../nutrients";
 import { MEALS, type CoachAction, type Meal, type NewExercise, type NewFood } from "../store";
 
 export interface ParsedFood extends NewFood {
@@ -84,6 +85,7 @@ export function toFood(o: unknown): ParsedFood | null {
     protein: m(KEYS.protein),
     carbs: m(KEYS.carbs),
     fat: m(KEYS.fat),
+    micros: readMicros(r, num),
     quantity: 1,
     meal: asMeal(r.meal),
     confidence: conf === "high" || conf === "medium" || conf === "low" ? conf : undefined,

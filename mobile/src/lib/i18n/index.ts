@@ -23,7 +23,7 @@ export function deviceLang(): Lang {
   return "en";
 }
 
-export type TFn = (key: StringKey | `meal.${string}` | `me.${string}` | `review.conf.${string}`, vars?: Record<string, string | number>) => string;
+export type TFn = (key: StringKey | `meal.${string}` | `me.${string}` | `review.conf.${string}` | `nut.${string}`, vars?: Record<string, string | number>) => string;
 
 /** t("key", {n: 2}) — a "_one" variant is used when n === 1. */
 export function makeT(lang: Lang): TFn {

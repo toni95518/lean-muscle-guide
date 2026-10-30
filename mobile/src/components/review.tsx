@@ -5,6 +5,7 @@ import type { NewExercise } from "../lib/store";
 import { C, T } from "../lib/theme";
 import { useApp } from "../state/app";
 import { IconClose } from "./icons";
+import { useMicroLine } from "./nutrients";
 import { Checkbox, s, Stepper } from "./ui";
 
 export type ReviewRow =
@@ -32,6 +33,7 @@ export function rowsTotal(rows: ReviewRow[]) {
 
 export function ReviewList({ rows, onChange }: { rows: ReviewRow[]; onChange: (rows: ReviewRow[]) => void }) {
   const { t, f } = useApp();
+  const microLine = useMicroLine();
   const set = (key: string, patch: Partial<ReviewRow>) => onChange(rows.map((r) => (r.key === key ? ({ ...r, ...patch } as ReviewRow) : r)));
   const conf = (c?: string) => (c ? t(`review.conf.${c}` as "review.conf.high") : "");
   return (
@@ -55,6 +57,7 @@ export function ReviewList({ rows, onChange }: { rows: ReviewRow[]; onChange: (r
                     ? [r.food.serving, conf(r.food.confidence), `${t("abbr.p")} ${f.int(r.food.protein * r.scale)} · ${t("abbr.c")} ${f.int(r.food.carbs * r.scale)} · ${t("abbr.f")} ${f.int(r.food.fat * r.scale)}`].filter(Boolean).join(" · ")
                     : `${t("ex.title")}${r.ex.minutes ? ` · ${r.ex.minutes} ${t("unit.min")}` : ""}`}
                 </Text>
+                {r.kind === "food" && microLine(r.food.micros, r.scale) ? <Text style={[T.small, { fontSize: 11.5 }]}>{microLine(r.food.micros, r.scale)}</Text> : null}
               </View>
               <View style={{ alignItems: "flex-end", width: 64, flexShrink: 0 }}>
                 <TextInput

@@ -1,12 +1,13 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { IconNext } from "../../components/icons";
 import { useToast } from "../../components/toast";
 import { Btn, Card, Chips, Field, Header, Screen, SectionTitle, Seg, s } from "../../components/ui";
 import { providerInfo } from "../../lib/ai/providers";
 import { LANGS } from "../../lib/i18n";
+import { fmtAmount, NUTRIENTS, type NutrientId } from "../../lib/nutrients";
 import { ACTIVITY_LEVELS, fromDisplayWeight, liters, PROTEIN_LEVELS, toDisplayWeight, WEIGHT_LABEL, type Goal, type Sex, type WeightUnit } from "../../lib/nutrition";
 import * as store from "../../lib/store";
 import type { Lang } from "../../lib/store";
@@ -103,6 +104,8 @@ export default function Me() {
         <Btn label={t("me.save")} onPress={save} />
       </Card>
 
+      <NutrientSettings />
+
       <Card>
         <SectionTitle>{t("lang.label")}</SectionTitle>
         <Chips label={t("lang.label")} options={langOptions} value={settings.language ?? "auto"} onChange={(v) => app.updateSettings({ language: v === "auto" ? null : v })} />
@@ -132,6 +135,61 @@ export default function Me() {
         )}
       </Card>
     </Screen>
+  );
+}
+
+/** Pick which extra nutrients to track, and their daily targets. */
+function NutrientSettings() {
+  const app = useApp();
+  const { t, profile } = app;
+  const toast = useToast();
+  const tracked = profile.nutrients;
+  const toggle = (id: NutrientId) =>
+    app.updateProfile({ nutrients: tracked.includes(id) ? tracked.filter((x) => x !== id) : NUTRIENTS.map((n) => n.id).filter((x) => x === id || tracked.includes(x)) });
+  const setTarget = (id: NutrientId, text: string) => {
+    const next = { ...profile.nutrientTargets };
+    const v = parseFloat(text.replace(",", "."));
+    if (!text.trim()) delete next[id];
+    else if (v > 0 && v < 100000) next[id] = v;
+    else return toast.show(t("nut.err.target"));
+    app.updateProfile({ nutrientTargets: next });
+  };
+  return (
+    <Card>
+      <SectionTitle>{t("nut.track")}</SectionTitle>
+      <Text style={T.small}>{t("nut.trackHint")}</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }} accessibilityLabel={t("nut.track")}>
+        {NUTRIENTS.map((n) => {
+          const on = tracked.includes(n.id);
+          return (
+            <Pressable key={n.id} onPress={() => toggle(n.id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }}
+              style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, borderWidth: on ? 2 : 1, borderColor: on ? C.accent : C.line, backgroundColor: on ? C.accentSoft : C.surface, minHeight: 38, justifyContent: "center" }}>
+              <Text style={{ fontSize: 13.5, fontWeight: on ? "700" : "500", color: C.ink }}>{on ? "✓ " : ""}{t(`nut.${n.id}`)}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {tracked.length ? <Text style={T.label}>{t("nut.targets")}</Text> : null}
+      {NUTRIENTS.filter((n) => tracked.includes(n.id)).map((n) => (
+        <NutrientTarget key={`${n.id}:${profile.nutrientTargets[n.id] ?? ""}`} label={`${t(`nut.${n.id}`)}${n.kind === "limit" ? ` (${t("nut.limit")})` : ""}`}
+          unit={n.unit} initial={profile.nutrientTargets[n.id]} placeholder={String(fmtAmount(n.dv))} onSave={(v) => setTarget(n.id, v)} />
+      ))}
+      {tracked.length ? <Text style={T.small}>{t("nut.targetHint")}</Text> : null}
+    </Card>
+  );
+}
+
+function NutrientTarget({ label, unit, initial, placeholder, onSave }: { label: string; unit: string; initial?: number; placeholder: string; onSave: (v: string) => void }) {
+  const [v, setV] = useState(initial != null ? String(initial) : "");
+  return (
+    <View style={[s.row, { justifyContent: "space-between" }]}>
+      <Text style={{ flex: 1, fontSize: 14, color: C.ink }}>{label}</Text>
+      <View style={{ width: 130, justifyContent: "center" }}>
+        <TextInput value={v} onChangeText={setV} onEndEditing={() => onSave(v)} onBlur={() => onSave(v)} keyboardType="decimal-pad" placeholder={placeholder} placeholderTextColor="#8A988F"
+          accessibilityLabel={label} style={[s.input, { paddingRight: 44 }]} />
+        <Text style={s.suffix} pointerEvents="none">{unit}</Text>
+      </View>
+    </View>
   );
 }
 

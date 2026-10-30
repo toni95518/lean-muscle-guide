@@ -40,7 +40,7 @@ export default function PhotoLog() {
     setPhase("thinking");
     setError(null);
     try {
-      const r = await analyzeLog(settings.ai, lang, profile.weightKg, { meal, note: note.trim() || undefined, photoBase64: p.base64 });
+      const r = await analyzeLog(settings.ai, lang, profile.weightKg, { meal, note: note.trim() || undefined, photoBase64: p.base64, nutrients: profile.nutrients });
       setRows(toRows(r.foods, r.exercises));
       setNotes(r.notes);
       setPhase("review");

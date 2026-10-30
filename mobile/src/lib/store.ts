@@ -4,6 +4,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { isDateKey, range, today } from "./dates";
 import { DEFAULT_PROFILE, type Profile } from "./nutrition";
+import { NUTRIENT_IDS, type Micros } from "./nutrients";
 
 export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
 export const MEALS: Meal[] = ["breakfast", "lunch", "dinner", "snack"];
@@ -18,6 +19,7 @@ export interface FoodEntry {
   carbs: number;
   fat: number;
   quantity: number;
+  micros?: Micros; // optional nutrients per serving (sodium, vitamins…), when estimated
   meal: Meal;
   source: Source;
   libraryName?: string; // set when it came from the built-in library (translated for display)
@@ -48,6 +50,7 @@ export interface Favorite {
   protein: number;
   carbs: number;
   fat: number;
+  micros?: Micros;
   libraryName?: string;
 }
 export type Lang = "en" | "zh" | "fr" | "de";
@@ -214,10 +217,20 @@ export interface Totals {
   fat: number;
   burned: number;
   minutes: number;
+  micros: Micros; // summed over foods that have estimates
+  microFoods: number; // how many foods have nutrient estimates
+  foods: number;
 }
 export function totals(d: Day): Totals {
-  const t = { kcal: 0, protein: 0, carbs: 0, fat: 0, burned: 0, minutes: 0 };
+  const t: Totals = { kcal: 0, protein: 0, carbs: 0, fat: 0, burned: 0, minutes: 0, micros: {}, microFoods: 0, foods: d.food.length };
   for (const f of d.food) {
+    if (f.micros) {
+      t.microFoods++;
+      for (const id of NUTRIENT_IDS) {
+        const v = f.micros[id];
+        if (v != null) t.micros[id] = (t.micros[id] ?? 0) + v * f.quantity;
+      }
+    }
     t.kcal += f.kcal * f.quantity;
     t.protein += f.protein * f.quantity;
     t.carbs += f.carbs * f.quantity;

@@ -13,6 +13,7 @@ import * as store from "../lib/store";
 import { MEALS, type Day, type Favorite, type FoodEntry, type Meal, type NewFood } from "../lib/store";
 import { C, T } from "../lib/theme";
 import { useApp } from "../state/app";
+import { nutrientInfo, type Micros, type NutrientId } from "../lib/nutrients";
 
 type Tab = "fav" | "search" | "quick" | "exercise";
 
@@ -49,7 +50,7 @@ export default function Add() {
       {tab === "search" ? <Search onAdd={(item) => addFood([item], item.libraryName ? "library" : "favorite")} lang={lang} /> : null}
       {tab === "quick" ? <Quick onAdd={async (item, fav) => {
         await addFood([item], "quick", true);
-        if (fav) await app.setFavorites([...app.favorites, { id: store.uid(), name: item.name, serving: item.serving, kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat }]);
+        if (fav) await app.setFavorites([...app.favorites, { id: store.uid(), name: item.name, serving: item.serving, kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat, micros: item.micros }]);
       }} /> : null}
       {tab === "exercise" ? <Exercise date={date} onDone={(name, kcal) => { done(t("toast.loggedEx", { name, kcal: f.int(kcal) })); router.back(); }} /> : null}
     </Screen>
@@ -63,7 +64,7 @@ function dateLabel(date: string, t: ReturnType<typeof useApp>["t"], f: ReturnTyp
   return f.date(new Date(y, m - 1, d), { weekday: "long", month: "long", day: "numeric" });
 }
 
-const favToFood = (x: Favorite | FoodEntry): NewFood => ({ name: x.name, serving: x.serving, kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat, quantity: 1, libraryName: x.libraryName });
+const favToFood = (x: Favorite | FoodEntry): NewFood => ({ name: x.name, serving: x.serving, kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat, micros: x.micros, quantity: 1, libraryName: x.libraryName });
 
 function Favorites({ date, onAdd }: { date: string; onAdd: (items: NewFood[], src: store.Source) => Promise<void> }) {
   const app = useApp();
@@ -188,8 +189,19 @@ function Search({ onAdd, lang }: { onAdd: (item: NewFood) => Promise<void>; lang
   );
 }
 
+/** Typed nutrient amounts → micros (blank fields are left out). */
+function readTyped(m: Record<string, string>): Micros | undefined {
+  const out: Micros = {};
+  for (const [id, v] of Object.entries(m)) {
+    const x = parseFloat(v.replace(",", "."));
+    if (v.trim() && x >= 0) out[id as NutrientId] = x;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function Quick({ onAdd }: { onAdd: (item: NewFood, saveFav: boolean) => Promise<void> }) {
-  const { t } = useApp();
+  const { t, profile } = useApp();
+  const [micro, setMicro] = useState<Record<string, string>>({});
   const [kcal, setKcal] = useState("");
   const [name, setName] = useState("");
   const [p, setP] = useState("");
@@ -207,11 +219,19 @@ function Quick({ onAdd }: { onAdd: (item: NewFood, saveFav: boolean) => Promise<
         <Field label={t("macro.carbs")} value={c} onChangeText={setC} keyboardType="decimal-pad" placeholder="0" suffix="g" />
         <Field label={t("macro.fat")} value={fat} onChangeText={setFat} keyboardType="decimal-pad" placeholder="0" suffix="g" />
       </View>
+      {profile.nutrients.length ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          {profile.nutrients.map((id) => (
+            <Field key={id} label={t(`nut.${id}`)} value={micro[id] ?? ""} onChangeText={(v) => setMicro({ ...micro, [id]: v })} keyboardType="decimal-pad"
+              placeholder={t("auth.optional")} suffix={nutrientInfo(id).unit} style={{ flexBasis: "45%", flexGrow: 1 }} />
+          ))}
+        </View>
+      ) : null}
       <View style={s.row}>
         <Checkbox on={fav} onToggle={() => setFav(!fav)} label={t("quick.saveFav")} />
         <Text style={{ color: C.ink, flex: 1 }} onPress={() => setFav(!fav)}>{t("quick.saveFav")}</Text>
       </View>
-      <Btn label={t("quick.btn")} disabled={!kcal.trim()} onPress={() => onAdd({ name: name.trim() || t("quick.default"), serving: "1 serving", kcal: Math.round(n(kcal)), protein: n(p), carbs: n(c), fat: n(fat), quantity: 1 }, fav && !!name.trim())} />
+      <Btn label={t("quick.btn")} disabled={!kcal.trim()} onPress={() => onAdd({ name: name.trim() || t("quick.default"), serving: "1 serving", kcal: Math.round(n(kcal)), protein: n(p), carbs: n(c), fat: n(fat), micros: readTyped(micro), quantity: 1 }, fav && !!name.trim())} />
     </Card>
   );
 }

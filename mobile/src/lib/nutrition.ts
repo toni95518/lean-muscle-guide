@@ -1,4 +1,5 @@
 // Same formulas as server/src/lib/nutrition.ts.
+import type { NutrientId } from "./nutrients";
 export type Sex = "female" | "male";
 export type Goal = "lose1" | "lose05" | "maintain" | "gain05";
 export type WeightUnit = "kg" | "lb" | "jin";
@@ -15,6 +16,8 @@ export interface Profile {
   waterGoal: number; // glasses of 250 ml
   weightUnit: WeightUnit;
   setupComplete: boolean;
+  nutrients: NutrientId[]; // extra nutrients the user tracks (sodium, vitamins…)
+  nutrientTargets: Partial<Record<NutrientId, number>>; // overrides of the default daily targets
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -29,6 +32,8 @@ export const DEFAULT_PROFILE: Profile = {
   waterGoal: 8,
   weightUnit: "kg",
   setupComplete: false,
+  nutrients: [],
+  nutrientTargets: {},
 };
 
 export const GOAL_ADJUSTMENT: Record<Goal, number> = { lose1: -500, lose05: -250, maintain: 0, gain05: 250 };

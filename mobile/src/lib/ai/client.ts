@@ -111,21 +111,27 @@ export async function complete(cfg: AiConfig, key: string | null, req: AiRequest
         : { role: m.role, content: m.text },
     ),
   ];
-  const limit = req.maxTokens ?? 1500;
-  // OpenAI's newer (reasoning) models reject max_tokens and a custom temperature, and their
-  // hidden reasoning counts toward the output limit, so they get more room.
-  // Most other OpenAI-style providers want the classic parameters.
-  const modern = { model: cfg.model, max_completion_tokens: limit * 4, messages };
-  const classic = { model: cfg.model, max_tokens: limit, temperature: 0.2, messages };
+  // OpenAI's and Gemini's newer models "think" before answering, and that hidden thinking
+  // counts toward the output limit, so they get 4× the room or the answer gets cut off.
+  const thinks = cfg.provider === "openai" || cfg.provider === "gemini";
+  const limit = (req.maxTokens ?? 1500) * (thinks ? 4 : 1);
+  // OpenAI's newer models reject max_tokens and a custom temperature ("modern" style);
+  // most other OpenAI-style providers want the classic parameters.
+  const build = (style: "modern" | "classic", max: number) =>
+    style === "modern" ? { model: cfg.model, max_completion_tokens: max, messages } : { model: cfg.model, max_tokens: max, temperature: 0.2, messages };
   const send = (body: object) => call(`${base}/chat/completions`, { method: "POST", headers: headers(cfg, key), body: JSON.stringify(body) });
+  let style: "modern" | "classic" = cfg.provider === "openai" ? "modern" : "classic";
   let json: any;
   try {
-    json = await send(cfg.provider === "openai" ? modern : classic);
+    json = await send(build(style, limit));
   } catch (e) {
     // Retry once with the other parameter style if the provider says one isn't supported.
     if (!(e instanceof AiError && isParamError(e.message))) throw e;
-    json = await send(cfg.provider === "openai" ? classic : modern);
+    style = style === "modern" ? "classic" : "modern";
+    json = await send(build(style, limit));
   }
+  // Cut off at the limit (finish_reason "length"): try once more with 3× the room.
+  if (json?.choices?.[0]?.finish_reason === "length") json = await send(build(style, limit * 3));
   const content = json?.choices?.[0]?.message?.content;
   const out = (Array.isArray(content) ? content.map((c: any) => c?.text ?? "").join("\n") : String(content ?? "")).trim();
   if (!out) throw new AiError("empty", "empty");

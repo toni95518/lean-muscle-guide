@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { IconBack, IconCamera, IconChat, IconClose, IconMic, IconNext, IconSpark, IconStar } from "../../components/icons";
+import { NutrientCard, useMicroLine } from "../../components/nutrients";
 import { useToast } from "../../components/toast";
 import { Btn, Card, IconButton, MacroBar, Notice, Ring, Screen, SectionTitle, Seg, Tag, s } from "../../components/ui";
 import { providerInfo } from "../../lib/ai/providers";
@@ -32,7 +33,8 @@ export default function Today() {
   const tk = today();
   const future = date > tk;
   const title = date === tk ? t("day.today") : date === shift(tk, -1) ? t("day.yesterday") : date === shift(tk, 1) ? t("day.tomorrow") : f.date(parseKey(date), { weekday: "long" });
-  const tot = day ? store.totals(day) : { kcal: 0, protein: 0, carbs: 0, fat: 0, burned: 0, minutes: 0 };
+  const tot = store.totals(day ?? { date, food: [], exercise: [], waterGlasses: 0, weightKg: null });
+  const microLine = useMicroLine();
   const left = goals.kcal - (tot.kcal - tot.burned);
   const over = left < 0;
   const aiReady = app.hasAiKey && settings.ai;
@@ -131,6 +133,8 @@ export default function Today() {
         </View>
       </Card>
 
+      <NutrientCard tot={tot} />
+
       {date === tk && aiReady && new Date().getHours() >= 14 && proteinLeft > 20 ? (
         <Pressable onPress={() => router.push("/coach")} accessibilityRole="button" style={[s.row, { backgroundColor: C.accentSoft, borderRadius: 14, padding: 12, alignItems: "flex-start" }]}>
           <IconChat size={20} color={C.accent} />
@@ -159,6 +163,7 @@ export default function Today() {
                       {e.source === "ai" || e.source === "coach" ? <Tag kind="ai" /> : e.source === "quick" ? <Tag kind="quick" /> : null}
                       {(e.quantity !== 1 ? f.dec(e.quantity, 2) + " × " : "") + app.serving(e.serving)} · {t("abbr.p")} {f.int(e.protein * e.quantity)} · {t("abbr.c")} {f.int(e.carbs * e.quantity)} · {t("abbr.f")} {f.int(e.fat * e.quantity)}
                     </Text>
+                    {microLine(e.micros, e.quantity) ? <Text style={[T.small, { fontSize: 11.5 }]} numberOfLines={1}>{microLine(e.micros, e.quantity)}</Text> : null}
                   </View>
                   <Text style={[T.num, { fontSize: 18, color: C.ink }]}>{f.int(e.kcal * e.quantity)}</Text>
                   <IconButton label={t("a11y.remove", { name: app.food(e.name, e.libraryName) })} onPress={() => removeFood(e)} style={{ borderWidth: 0, width: 36, height: 36 }}>

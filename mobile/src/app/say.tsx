@@ -34,7 +34,7 @@ export default function SayIt() {
     setPhase("thinking");
     setError(null);
     try {
-      const r = await analyzeLog(settings.ai, lang, profile.weightKg, { meal, text: text.trim() });
+      const r = await analyzeLog(settings.ai, lang, profile.weightKg, { meal, text: text.trim(), nutrients: profile.nutrients });
       setRows(toRows(r.foods, r.exercises));
       setNotes(r.notes);
       setPhase("review");

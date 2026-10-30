@@ -1,9 +1,15 @@
 import type { TFn } from "../i18n";
+import type { NutrientId } from "../nutrients";
 import type { AiConfig, ChatMessage, Lang, Meal } from "../store";
 import { getSecret, SECRET } from "../secrets";
 import { AiError, complete } from "./client";
 import { parseCoachReply, parseLogReply, ParseError, type ParsedLog } from "./parse";
 import { coachSystemPrompt, logSystemPrompt, logUserPrompt, type CoachContext } from "./prompts";
+
+/** Shows the AI's raw reply in the Expo terminal, to see why it couldn't be read. */
+function logUnreadable(reply: string) {
+  console.warn(`AI reply could not be read (${reply.length} chars). Start:\n${reply.slice(0, 600)}\n…End:\n${reply.slice(-300)}`);
+}
 
 async function keyOrThrow() {
   const key = await getSecret(SECRET.aiKey);
@@ -12,14 +18,19 @@ async function keyOrThrow() {
 }
 
 /** Photo and/or words → foods and exercises to review. */
-export async function analyzeLog(cfg: AiConfig, lang: Lang, weightKg: number, input: { meal: Meal; note?: string; text?: string; photoBase64?: string }): Promise<ParsedLog> {
+export async function analyzeLog(cfg: AiConfig, lang: Lang, weightKg: number, input: { meal: Meal; note?: string; text?: string; photoBase64?: string; nutrients?: NutrientId[] }): Promise<ParsedLog> {
   const key = await keyOrThrow();
   const reply = await complete(cfg, key, {
-    system: logSystemPrompt(lang, weightKg),
+    system: logSystemPrompt(lang, weightKg, input.nutrients),
     messages: [{ role: "user", text: logUserPrompt({ meal: input.meal, note: input.note, text: input.text, hasPhoto: !!input.photoBase64 }), imageBase64: input.photoBase64 }],
     maxTokens: 1500,
   });
-  return parseLogReply(reply);
+  try {
+    return parseLogReply(reply);
+  } catch (e) {
+    logUnreadable(reply);
+    throw e;
+  }
 }
 
 /** One coach turn, with the recent conversation for context. */
@@ -31,7 +42,12 @@ export async function coachTurn(cfg: AiConfig, lang: Lang, ctx: CoachContext, hi
     messages: [...recent, { role: "user" as const, text: message }],
     maxTokens: 1200,
   });
-  return parseCoachReply(reply, ctx.today);
+  try {
+    return parseCoachReply(reply, ctx.today);
+  } catch (e) {
+    logUnreadable(reply);
+    throw e;
+  }
 }
 
 export function aiErrorText(e: unknown, t: TFn): string {
