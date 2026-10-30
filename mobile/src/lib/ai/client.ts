@@ -24,6 +24,9 @@ export class AiError extends Error {
 
 const TIMEOUT_MS = 90_000;
 
+/** "Unsupported parameter: 'max_tokens'…", "temperature does not support 0.2…" and similar. */
+const isParamError = (msg: string) => /max_tokens|max_completion_tokens|temperature|unsupported (parameter|value)/i.test(msg);
+
 async function call(url: string, init: RequestInit): Promise<any> {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
@@ -46,6 +49,7 @@ async function call(url: string, init: RequestInit): Promise<any> {
     const msg = String(body?.error?.message ?? body?.message ?? text ?? res.statusText).slice(0, 300);
     if (res.status === 401 || res.status === 403) throw new AiError("auth", msg);
     if (res.status === 402 || res.status === 429) throw new AiError("quota", msg);
+    if (res.status === 400 && isParamError(msg)) throw new AiError("other", msg);
     if (res.status === 404 || (res.status === 400 && /model/i.test(msg))) throw new AiError("bad_model", msg);
     throw new AiError("other", msg);
   }
@@ -93,26 +97,35 @@ export async function complete(cfg: AiConfig, key: string | null, req: AiRequest
     return out;
   }
 
-  const body = {
-    model: cfg.model,
-    max_tokens: req.maxTokens ?? 1500,
-    temperature: 0.2,
-    messages: [
-      { role: "system", content: req.system },
-      ...req.messages.map((m) =>
-        m.imageBase64
-          ? {
-              role: m.role,
-              content: [
-                { type: "text", text: m.text },
-                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${m.imageBase64}` } },
-              ],
-            }
-          : { role: m.role, content: m.text },
-      ),
-    ],
-  };
-  const json = await call(`${base}/chat/completions`, { method: "POST", headers: headers(cfg, key), body: JSON.stringify(body) });
+  const messages = [
+    { role: "system", content: req.system },
+    ...req.messages.map((m) =>
+      m.imageBase64
+        ? {
+            role: m.role,
+            content: [
+              { type: "text", text: m.text },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${m.imageBase64}` } },
+            ],
+          }
+        : { role: m.role, content: m.text },
+    ),
+  ];
+  const limit = req.maxTokens ?? 1500;
+  // OpenAI's newer (reasoning) models reject max_tokens and a custom temperature, and their
+  // hidden reasoning counts toward the output limit, so they get more room.
+  // Most other OpenAI-style providers want the classic parameters.
+  const modern = { model: cfg.model, max_completion_tokens: limit * 4, messages };
+  const classic = { model: cfg.model, max_tokens: limit, temperature: 0.2, messages };
+  const send = (body: object) => call(`${base}/chat/completions`, { method: "POST", headers: headers(cfg, key), body: JSON.stringify(body) });
+  let json: any;
+  try {
+    json = await send(cfg.provider === "openai" ? modern : classic);
+  } catch (e) {
+    // Retry once with the other parameter style if the provider says one isn't supported.
+    if (!(e instanceof AiError && isParamError(e.message))) throw e;
+    json = await send(cfg.provider === "openai" ? classic : modern);
+  }
   const content = json?.choices?.[0]?.message?.content;
   const out = (Array.isArray(content) ? content.map((c: any) => c?.text ?? "").join("\n") : String(content ?? "")).trim();
   if (!out) throw new AiError("empty", "empty");
@@ -130,5 +143,10 @@ export async function listModels(cfg: AiConfig, key: string): Promise<string[]> 
 
 /** Small request to confirm the key and model work. */
 export async function testConnection(cfg: AiConfig, key: string): Promise<void> {
-  await complete(cfg, key, { system: "Reply with the single word OK.", messages: [{ role: "user", text: "Test" }], maxTokens: 10 });
+  try {
+    await complete(cfg, key, { system: "Reply with the single word OK.", messages: [{ role: "user", text: "Test" }], maxTokens: 50 });
+  } catch (e) {
+    // An empty answer still proves the key and model work (reasoning models can spend a tiny limit thinking).
+    if (!(e instanceof AiError && e.code === "empty")) throw e;
+  }
 }
