@@ -137,9 +137,9 @@ export default function AccountScreen() {
       ) : (
         <Card>
           <Seg label={t("acct.title")} options={[["in", t("acct.signIn")], ["up", t("acct.create")]]} value={mode} onChange={setMode} />
-          <Field label={t("acct.email")} value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" style={{ flex: 0 }} />
-          <Field label={t("acct.password")} value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete={mode === "up" ? "new-password" : "current-password"} hint={mode === "up" ? t("acct.passwordHint") : undefined} style={{ flex: 0 }} />
-          {advanced ? <Field label={t("acct.server")} value={server} onChangeText={setServer} autoCapitalize="none" autoCorrect={false} keyboardType="url" hint={t("acct.serverHint")} style={{ flex: 0 }} /> : null}
+          <Field label={t("acct.email")} value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" style={{ flexGrow: 0, flexBasis: "auto" }} />
+          <Field label={t("acct.password")} value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete={mode === "up" ? "new-password" : "current-password"} hint={mode === "up" ? t("acct.passwordHint") : undefined} style={{ flexGrow: 0, flexBasis: "auto" }} />
+          {advanced ? <Field label={t("acct.server")} value={server} onChangeText={setServer} autoCapitalize="none" autoCorrect={false} keyboardType="url" hint={t("acct.serverHint")} style={{ flexGrow: 0, flexBasis: "auto" }} /> : null}
           <Btn label={mode === "up" ? t("acct.create") : t("acct.signIn")} loading={busy === "sign"} onPress={submit} />
           <Btn kind="link" small label={advanced ? t("connect.hideAdvanced") : t("connect.advanced")} onPress={() => setAdvanced(!advanced)} style={{ alignSelf: "flex-start" }} />
         </Card>
