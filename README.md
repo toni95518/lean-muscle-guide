@@ -1,290 +1,198 @@
 # 薄肌理论指南 · Lean Muscle Theory Guide
 
-A full-stack nutrition and fitness tracker. The app shows its name in Chinese (薄肌理论指南) on Chinese-language phones and in English (Lean Muscle Theory Guide) everywhere else. Users log meals, workouts, water and body weight, and see daily calorie and macro targets calculated from their own profile. Data is stored per account in PostgreSQL behind a REST API. The mobile-first web client is built to be added to the iPhone Home Screen.
+A full-stack nutrition and fitness tracker built around the user's own AI. Snap a photo of a meal or say what you ate and did, and the AI the user chose (Gemini, ChatGPT, Claude and others) estimates calories, macros and any nutrients they track. Every estimate is reviewed before it's saved. The app shows its name in Chinese (薄肌理论指南) on Chinese-language phones and in English everywhere else.
 
-**Version 0.4.0**: see [CHANGELOG.md](CHANGELOG.md).
+**Version 1.0.0**, released October 30, 2026. See [CHANGELOG.md](CHANGELOG.md).
+
+## Try it
+
+| Platform | How |
+|---|---|
+| **Android** | Install the APK from the 1.0.0 build on [expo.dev](https://expo.dev/accounts/toni95518/projects/lean-muscle-guide/builds) (Install → link or QR code). Allow "install unknown apps" when asked. |
+| **iPhone and any browser** | Open **https://lean-muscle-guide.expo.app**. On iPhone, tap Share → **Add to Home Screen** so it opens full-screen and keeps its data. |
+| **Developers** | Run it with Expo Go; see [Run the phone app](#run-the-phone-app). |
+
+Then open **Connect your AI** and paste an API key. A free Gemini key from [Google AI Studio](https://aistudio.google.com) works; pick a model whose name ends in `-flash`.
 
 ## Features
 
-- **Accounts.** Email and password sign-up with bcrypt-hashed passwords and JWT sessions. A WeChat Mini Program login endpoint is ready for the mini program client.
-- **Daily calorie budget.** Goal − food + exercise, with protein, carb and fat progress against personal targets.
-- **Food logging.** A shared library of about 45 foods, saved custom foods, and recent foods by meal. Servings are adjustable.
-- **Quick add.** Type calories eaten (with optional macros) or calories burned directly, for example a number from a menu, a label, or a watch. Minutes are optional.
-- **Ask your own AI.** The app gives a prompt in the user's language. They paste it into the AI app they already use (ChatGPT, Claude, 豆包, DeepSeek…) with a photo of the food, paste the reply back, review and edit the estimate, and log every item at once. Entries are tagged "AI" or "Quick".
-- **Four languages.** English, 中文, Français and Deutsch for the whole interface, including the food and activity library, number and date formats, and the AI prompt. It follows the device language by default; users can pick another on the sign-in screen or in Goals, and the choice is saved to their account.
-- **Plan ahead.** Move forward to any day up to a year ahead, or jump with the date picker, and add planned meals and workouts. Future days are marked as a plan. Water and weight are only logged for today or earlier.
-- **Exercise logging.** 24 activities with MET values. Calories burned are estimated from duration and body weight, and users can override the number.
-- **Water and weight.** Daily water in liters (tap a 250 ml glass) and weigh-ins. The latest weigh-in updates the profile, which feeds into targets and burn estimates.
-- **Trends.** A 7-day summary computed on the server: calories eaten vs. burned, average intake and protein, workouts, active minutes, logging streak and weight trend.
-- **Units.** Weight in lb, kg or 斤 (jin), and height in ft/in or cm. Storage is always kg and cm.
-- **Privacy.** Every query is scoped to the signed-in user, and tests check that users can't read or change each other's data.
+- **Local-first.** The log, favorites and goals are stored on the device. No account is needed, and the app works offline except for AI requests.
+- **Your own AI.** Claude, ChatGPT, Gemini, DeepSeek, 通义千问 Qwen, 豆包 Doubao, OpenRouter or any OpenAI-compatible API. Requests go straight from the device to that provider. The key stays in the phone's secure storage (browser storage on the web version) and never reaches this project's server.
+- **Photo and Say it.** One photo, or one sentence via the keyboard's dictation ("two eggs and toast, then a 30-minute run"), becomes a list of foods and exercise. Names, calories and portions can be edited before anything is added.
+- **Coach.** A chat that knows the user's goal, targets and last 7 days. It can suggest meals or workouts for today or a future day as cards; nothing is logged until the user taps Add.
+- **Nutrient tracking.** Users choose any of 15 nutrients: sodium, sugar, saturated fat, cholesterol, fiber, potassium, calcium, iron, magnesium, zinc, vitamins A, C, D and B12, and folate. The AI estimates them per food, and Today shows each against the U.S. FDA Daily Value or the user's own target. Limits turn red when exceeded.
+- **Fast logging without AI.** Favorites (long-press any food), "repeat yesterday's meal", a 45-food library, quick calories in or out, and 24 activities with MET-based burn estimates.
+- **Daily picture.** Calorie ring (goal − food + exercise), protein/carbs/fat bars, water in liters, weigh-ins in kg, lb or 斤, and planning up to a year ahead.
+- **Trends.** 7- and 30-day eaten vs. burned, averages, days on target, streak and weight line.
+- **Four languages.** English, 中文, Français and Deutsch, including the food library and the AI prompts.
+- **Optional backup account.** Sign in only to back up the log to the server and restore it on another device.
 
-## Tech stack
+## How it's built
 
-| Layer | Choice |
-|---|---|
-| API | Node.js 22, Express 5, TypeScript |
-| Database | PostgreSQL 16 with Drizzle ORM and SQL migrations |
-| Validation | Zod (every request body and query) |
-| Auth | JWT (HS256, 30-day tokens), bcrypt, rate-limited login |
-| Security | Helmet (CSP, headers), per-user row scoping, JSON body limit |
-| Web client | Vanilla JS, HTML and CSS with hand-built SVG charts, in a single file |
-| Tests | Vitest + Supertest against a real PostgreSQL database |
-| DevOps | Dockerfile, Docker Compose, GitHub Actions CI |
-
-## Architecture
+| Part | Technology | Hosted on |
+|---|---|---|
+| Phone app (`mobile/`) | Expo SDK 58, React Native 0.88, React 19, TypeScript, Expo Router | Android: EAS Build (APK) |
+| Web version of the phone app | The same code, exported with React Native Web | EAS Hosting: lean-muscle-guide.expo.app |
+| Backup and accounts API (`server/`) | Node.js 22, Express 5, TypeScript, Zod, JWT, bcrypt, Helmet | Render (Docker, free plan) |
+| Database | PostgreSQL 16, Drizzle ORM, SQL migrations | Neon (free plan) |
+| Earlier web client (`web/`) | Vanilla JS, served by the API | Render |
+| Tests and CI | Vitest + Supertest against real PostgreSQL; TypeScript checks | GitHub Actions |
 
 ```
-┌────────────────────┐        HTTPS / JSON        ┌───────────────────────────┐
-│ Web client (web/)  │ ─────────────────────────▶ │ Express API (server/)     │
-│ iPhone Home Screen │   Authorization: Bearer    │  routes → services → db   │
-└────────────────────┘                            │  Zod validation           │
-┌────────────────────┐                            │  JWT auth middleware      │
-│ WeChat Mini Program│ ─── POST /api/auth/wechat ▶│                           │
-│ (planned)          │                            └─────────────┬─────────────┘
-└────────────────────┘                                          │ Drizzle ORM
-┌────────────────────┐                                          ▼
-│ iPhone app (Expo)  │                            ┌───────────────────────────┐
-│ (planned)          │                            │ PostgreSQL                │
-└────────────────────┘                            └───────────────────────────┘
+Phone app / web app ──────────────▶ User's chosen AI (Gemini, ChatGPT, Claude…)
+   │  log stored on the device          photo or text in, JSON estimates out
+   │
+   └── optional backup account ───▶ Express API on Render ───▶ PostgreSQL on Neon
+                                      /api/auth, /api/backup
 ```
 
-One API serves every client. The server never decides what "today" is: clients send their local calendar date (`YYYY-MM-DD`), so days are correct in any time zone.
+There is no AI on the server, so the project has no AI costs, and photos never reach the server. The server never decides what "today" is: clients send their local date (`YYYY-MM-DD`), so days are right in every time zone.
 
 ## Project structure
 
 ```
-fuel-move/
+lean-muscle-guide/
+├── mobile/                     Phone app (Expo / React Native)
+│   ├── src/app/                Screens (Expo Router): tabs (Today, Coach, Trends, Me),
+│   │                           welcome, connect-ai, photo, say, add, account
+│   ├── src/components/         UI kit, review list, nutrient card, toast
+│   ├── src/lib/
+│   │   ├── store.ts            On-device storage (AsyncStorage), one record per day
+│   │   ├── nutrition.ts        Calorie and macro targets, units
+│   │   ├── nutrients.ts        The 15 trackable nutrients and their default targets
+│   │   ├── ai/                 Providers, client, prompts, reply parser
+│   │   ├── i18n/               Interface text in EN / ZH / FR / DE
+│   │   └── account.ts          Backup account client
+│   ├── app.json, eas.json      App config and EAS build profiles
+│   └── locales/                App name per language
 ├── server/
-│   ├── src/
-│   │   ├── app.ts              Express app (middleware, routes, static web client)
-│   │   ├── index.ts            Starts the HTTP server
-│   │   ├── env.ts              Validated environment variables
-│   │   ├── db/
-│   │   │   ├── schema.ts       Tables, enums, indexes
-│   │   │   ├── migrate.ts      Applies migrations + seeds libraries
-│   │   │   └── seed.ts
-│   │   ├── routes/             auth, me (profile), days, library, summary
-│   │   ├── services/           day loading/aggregation, profile
-│   │   ├── lib/                nutrition math, dates, auth, WeChat, errors
-│   │   └── data/library.ts     Seed foods and activities
-│   ├── drizzle/                Generated SQL migrations
-│   └── tests/                  Unit tests + API integration tests
-├── mobile/                     Phone app (Expo / React Native), v0.99
-│   ├── src/app/                Screens (Expo Router): tabs, welcome, connect-ai, photo, say, add, account
-│   ├── src/components/         UI kit, review list, toast
-│   ├── src/lib/                On-device store, nutrition math, AI client + prompts, i18n, backup
-│   ├── app.json, eas.json      App config and build profiles
-│   └── locales/                App name per language (薄肌理论指南 / Lean Muscle)
-├── web/index.html              Web client
-├── web/i18n.js                 Interface text in EN / ZH / FR / DE, plus library translations
-├── Dockerfile
-├── docker-compose.yml
-└── .github/workflows/ci.yml
+│   ├── src/                    Express app, routes, services, Drizzle schema
+│   ├── drizzle/                SQL migrations (applied automatically on start)
+│   └── tests/                  Unit and API tests
+├── web/                        Earlier browser client (v0.4)
+├── docs/RELEASING.md           How 1.0 was published and how to ship updates
+├── Dockerfile, docker-compose.yml
+└── .github/workflows/ci.yml    Server tests + phone app type check
 ```
 
-## The phone app (v0.99)
+## Run the phone app
 
-`mobile/` is a local-first iPhone and Android app built with Expo SDK 58.
-
-- **Everything stays on the phone.** The log, favorites and goals live in on-device storage. No sign-up is needed.
-- **AI-first logging, with the user's own AI.** Take a photo, or say what you ate and did in one sentence. The app sends it directly from the phone to the provider the user picked (Claude, ChatGPT, Gemini, DeepSeek, Qwen, Doubao, OpenRouter or any OpenAI-compatible API), then shows an editable review before anything is saved. The API key is kept in the phone's secure storage and never reaches this server.
-- **Coach.** A chat that knows the goal and the last 7 days. It can suggest meals for today or future days as cards that are added only when the user taps Add.
-- **Also:** favorites and "repeat yesterday", food library search, quick kcal in/out, exercise library with MET estimates, water in liters, weight in kg / lb / 斤, planning up to a year ahead, 7- and 30-day trends, and English / 中文 / Français / Deutsch.
-- **Optional backup account.** Signing in only uploads one JSON snapshot to `PUT /api/backup`, so the log can be restored on a new phone.
-
-### Try it on your phone (free)
-
-1. Install **Expo Go** from the App Store or Google Play.
-2. On your computer:
-   ```bash
-   cd mobile
-   npm install
-   npx expo start            # phone and computer on the same Wi-Fi
-   npx expo start --tunnel   # if they aren't (or the QR code won't connect)
-   ```
-3. Scan the QR code: with the Camera app on iPhone, or from inside Expo Go on Android.
-
-If Expo Go says the project needs a newer SDK, update Expo Go from the store.
-
-### Share an installable build
-
-- **Android (APK):** `npx eas-cli@latest build -p android --profile preview` (free Expo account). EAS gives you a download link; friends open it and install. Older Huawei phones running HarmonyOS 2–4 can install the APK too. **HarmonyOS NEXT (5+) cannot run Android apps**, so it isn't supported.
-- **iPhone:** friends without Expo Go need TestFlight, which requires the Apple Developer Program ($99/year): `npx eas-cli@latest build -p ios --profile production`, then `npx eas-cli@latest submit -p ios`.
-
-### Checks
+Requirements: Node.js 20+ and a free [Expo](https://expo.dev) account.
 
 ```bash
 cd mobile
-npm run typecheck                         # TypeScript
-npx expo export --platform web            # build that also runs in a browser
-```
-
-
-### Option A: Docker (easiest)
-
-```bash
-docker compose up --build
-```
-
-Open http://localhost:3000 and create an account.
-
-### Option B: Run locally
-
-Requirements: Node.js 20+ and PostgreSQL 14+.
-
-```bash
-# 1. Create a database
-createdb fuel_move
-
-# 2. Configure
-cd server
-cp .env.example .env        # then edit DATABASE_URL and JWT_SECRET
-
-# 3. Install, migrate, run
 npm install
-npm run db:migrate          # creates tables and seeds the food/activity library
-npm run dev                 # http://localhost:3000, restarts on file changes
+npx expo login              # once
+npx expo start --tunnel     # scan the QR code with Expo Go (App Store / Google Play)
 ```
 
-### Scripts (in `server/`)
+On iPhone, scan with the Camera app; on Android, scan from inside Expo Go. Press `r` in the terminal to reload after a change. To check the code: `npm run typecheck` and `npx expo-doctor`.
 
-| Command | What it does |
+Data saved in Expo Go is separate from the installed app and from the web version. Each keeps its own on-device storage, so use the backup account to move data between them.
+
+## Run the server
+
+**With Docker:**
+
+```bash
+docker compose up --build   # http://localhost:3000
+```
+
+**Without Docker** (Node.js 20+ and PostgreSQL 14+):
+
+```bash
+createdb fuel_move
+cd server
+cp .env.example .env        # set DATABASE_URL and JWT_SECRET
+npm install
+npm run db:migrate          # tables + food/activity library
+npm run dev                 # http://localhost:3000
+```
+
+| Command (in `server/`) | What it does |
 |---|---|
 | `npm run dev` | Start the API with live reload |
-| `npm test` | Run unit and API tests (needs a `fuel_move_test` database) |
-| `npm run typecheck` | Type-check without emitting |
+| `npm test` | Unit and API tests (needs a `fuel_move_test` database or `TEST_DATABASE_URL`) |
+| `npm run typecheck` | Type-check |
 | `npm run build` / `npm start` | Compile to `dist/` and run it |
-| `npm run db:generate` | Create a new migration after editing `schema.ts` |
-| `npm run db:migrate` | Apply migrations and seed |
-| `npm run db:studio` | Browse the database in Drizzle Studio |
+| `npm run db:generate` | Create a migration after editing `schema.ts` |
 
-To run the tests, create the test database once with `createdb fuel_move_test`, or set `TEST_DATABASE_URL`. The test run rebuilds that database from the migrations each time.
+Environment variables: `DATABASE_URL`, `JWT_SECRET` (a long random string), `CORS_ORIGIN` (comma-separated web origins allowed to call the API, for example `https://lean-muscle-guide.expo.app`), and optionally `WECHAT_APPID` / `WECHAT_SECRET`. Never commit `.env` or paste these values anywhere.
+
+## Releasing
+
+Version 1.0.0 is published as an Android APK (EAS Build), a web app (EAS Hosting) and the backup API (Render + Neon). [docs/RELEASING.md](docs/RELEASING.md) covers how each was set up and the commands for shipping updates.
 
 ## API reference
 
-All endpoints are under `/api` and use JSON. Everything except `/api/auth/*` and `/api/health` needs an `Authorization: Bearer <token>` header. Dates are `YYYY-MM-DD`, weights are in kg, and energy is in kcal.
+All endpoints are under `/api` and use JSON. Everything except `/api/auth/*` and `/api/health` needs `Authorization: Bearer <token>`. Dates are `YYYY-MM-DD`, weights are in kg and energy is in kcal. Errors look like `{ "error": { "code": "validation_failed", "message": "…", "details": [] } }`.
 
-Errors always have this shape:
-
-```json
-{ "error": { "code": "validation_failed", "message": "minutes: Number must be greater than or equal to 1", "details": [] } }
-```
-
-### Auth and account
+### Used by the phone app
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| POST | `/auth/register` | `{ email, password, name? }` | `{ token, user, profile, targets }` |
-| POST | `/auth/login` | `{ email, password }` | same as above |
-| POST | `/auth/wechat` | `{ code }` from `wx.login()` | same as above |
-| GET | `/me` | | `{ user, profile, targets }` |
-| DELETE | `/me` | | 204; deletes the account and all its data |
-| GET | `/profile` | | `{ profile, targets }` |
-| PATCH | `/profile` | any of `sex, age, heightCm, weightKg, activity, goal, calorieOverride, proteinPerKg, waterGoal, weightUnit, heightUnit, setupComplete, language` (`en`, `zh`, `fr`, `de` or `null` for the device language) | `{ profile, targets }` |
-| GET | `/targets` | | `{ bmr, tdee, kcal, protein, carbs, fat, water }` |
-| POST | `/push-tokens` | `{ platform, token }` | 204 |
+| POST | `/auth/register` | `{ email, password }` | `{ token, user, profile, targets }` |
+| POST | `/auth/login` | `{ email, password }` | same |
+| GET | `/backup` | | `{ data, updatedAt, bytes }`, or 404 before the first backup |
+| PUT | `/backup` | `{ data: Snapshot }` (up to 5 MB) | `{ updatedAt, bytes }`; replaces the previous backup |
+| DELETE | `/backup` | | 204 |
+| GET | `/health` | | `{ ok: true }` |
 
-### Days
+A snapshot holds the profile (goals, units, tracked nutrients), favorites, every logged day and the language. It never contains the AI key, the AI provider or the Coach chat.
 
-| Method | Path | Body | Returns |
-|---|---|---|---|
-| GET | `/days?from=&to=` | | days with any data (366-day maximum) |
-| GET | `/days/:date` | | `{ date, food[], exercise[], waterGlasses, weightKg, totals }` |
-| PUT | `/days/:date/water` | `{ glasses }` | |
-| PUT | `/days/:date/weight` | `{ weightKg }` (or `null` to clear) | also updates the profile weight if it's the latest weigh-in; 400 `future_weight` for future dates |
-| POST | `/days/:date/food` | `{ meal, foodId, quantity }`, or `{ meal, customFoodId, quantity }`, or `{ meal, name, kcal, protein?, carbs?, fat?, serving?, quantity?, saveAsCustom? }` | food entry |
-| POST | `/days/:date/food/batch` | `{ meal, source?, items: [{ name, kcal, protein?, carbs?, fat?, serving?, quantity? }] }` (up to 30) | `{ entries[] }` |
-| PATCH | `/food/:id` | any of `date, meal, quantity, name, serving, kcal, protein, carbs, fat` | food entry |
-| DELETE | `/food/:id` | | 204 |
-| POST | `/days/:date/exercise` | `{ activityId, minutes, kcal?, note? }` or `{ name, kcal, minutes?, note? }` | exercise entry; `kcal` is estimated if omitted; minutes default to 0 for quick adds |
-| PATCH | `/exercise/:id` | any of `date, name, minutes, kcal, note` | exercise entry; re-estimates kcal when minutes change |
-| DELETE | `/exercise/:id` | | 204 |
-
-### Library and summary
-
-| Method | Path | Returns |
-|---|---|---|
-| GET | `/foods?q=&limit=` | `{ recent[], custom[], library[] }` |
-| POST | `/foods/custom` | saves or updates a custom food by name |
-| DELETE | `/foods/custom/:id` | 204 |
-| GET | `/activities?q=` | activities with MET and `kcalPer30Min` for this user |
-| POST | `/activities/estimate` | `{ activityId \| met, minutes }` → `{ kcal }` |
-| GET | `/summary?to=&days=7` | daily series, averages, totals, streak, weight trend |
-
-### Backup (phone app)
+### Used by the earlier web client
 
 | Method | Path | Notes |
-| --- | --- | --- |
-| GET | `/api/backup` | The account's latest snapshot, or 404 |
-| PUT | `/api/backup` | `{ data: Snapshot }`, up to 5 MB; replaces the previous one |
-| DELETE | `/api/backup` | Removes it |
-
-### Ask your own AI
-
-| Method | Path | Returns |
 |---|---|---|
-| GET | `/ai/food-prompt?lang=en\|zh\|fr\|de&meal=` | `{ prompt }` for the user to paste into their AI with a food photo |
-| POST | `/ai/parse-food` | `{ text }` (the AI's reply) → `{ items[], notes, totals }`; 422 `ai_reply_unreadable` with a fix-it message if the reply can't be read |
-
-No model runs on the server, so there is no AI cost and the photo never reaches the server. The parser (`server/src/lib/aiFood.ts`) accepts the requested JSON format plus common variations: code fences, English or Chinese keys, values like "520 千卡", smart quotes, and bare arrays.
-
-### Example
-
-```bash
-TOKEN=$(curl -s localhost:3000/api/auth/register -H 'Content-Type: application/json' \
-  -d '{"email":"me@example.com","password":"a-long-password"}' | jq -r .token)
-
-curl -s localhost:3000/api/days/2026-10-21/exercise -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"name":"Rock climbing","minutes":60,"kcal":480}'
-
-curl -s "localhost:3000/api/summary?to=2026-10-21" -H "Authorization: Bearer $TOKEN"
-```
+| POST | `/auth/wechat` | `{ code }` from `wx.login()` |
+| GET / DELETE | `/me` | Account; DELETE removes it and all its data |
+| GET / PATCH | `/profile` | Profile and targets |
+| GET | `/targets` | `{ bmr, tdee, kcal, protein, carbs, fat, water }` |
+| GET | `/days?from=&to=`, `/days/:date` | Logged days |
+| PUT | `/days/:date/water`, `/days/:date/weight` | Weight rejects future dates (400 `future_weight`) |
+| POST | `/days/:date/food`, `/days/:date/food/batch`, `/days/:date/exercise` | Add entries |
+| PATCH / DELETE | `/food/:id`, `/exercise/:id` | Edit or remove entries |
+| GET / POST / DELETE | `/foods`, `/foods/custom`, `/activities`, `/activities/estimate` | Library and estimates |
+| GET | `/summary?to=&days=7` | Trends |
+| GET / POST | `/ai/food-prompt`, `/ai/parse-food` | Copy-paste AI flow |
+| POST | `/push-tokens` | For future reminders |
 
 ## How the numbers are calculated
 
-- **Resting energy (BMR)** uses the Mifflin–St Jeor equation: `10 × kg + 6.25 × cm − 5 × age + 5` (men) or `− 161` (women).
-- **Maintenance (TDEE)** is BMR × activity multiplier (1.2 to 1.725).
-- **Calorie target** is TDEE + goal adjustment (−500, −250, 0 or +250), rounded to 10, with a floor of 1,200 (women) or 1,500 (men). Users can set a custom target instead.
-- **Macros:** protein is g/kg × body weight, fat is 28% of calories, and carbs fill the rest.
-- **Exercise burn** is `MET × 3.5 × kg ÷ 200 × minutes`, with MET values from the Compendium of Physical Activities.
+- **Resting energy (BMR):** Mifflin–St Jeor, `10 × kg + 6.25 × cm − 5 × age + 5` (men) or `− 161` (women).
+- **Maintenance (TDEE):** BMR × activity (1.2 to 1.725).
+- **Calorie target:** TDEE + goal adjustment (−500, −250, 0 or +250), rounded to 10, with a floor of 1,200 (women) or 1,500 (men). Users can set their own.
+- **Macros:** protein = g/kg × weight, fat = 28% of calories, carbs = the rest.
+- **Exercise:** `MET × 3.5 × kg ÷ 200 × minutes`.
+- **Nutrient defaults:** U.S. FDA Daily Values for adults (for example sodium 2,300 mg, fiber 28 g, vitamin C 90 mg).
 
-This logic lives in `server/src/lib/nutrition.ts` as pure functions with unit tests. All figures are estimates for general fitness tracking, not medical advice.
+All figures, and every AI estimate, are for general fitness tracking, not medical advice.
 
 ## Design decisions
 
-- **Canonical units in the database.** Everything is stored in kg, cm and kcal, and clients convert for display. Adding 斤 needed no data migration.
-- **An entry `source` field** (`manual`, `library`, `custom`, `photo`, `apple_health`, `werun`, `fitbit`). Photo logging, Apple Health and wearables can write entries later without schema changes.
-- **Per-serving values plus quantity on each entry.** Totals are computed rather than stored, so editing a serving count is a single field change.
-- **"Bring your own AI" before building in AI.** The prompt and the parser live on the server, so a future version can call a model directly (or the WeChat and iPhone clients can reuse the same flow) without changing how entries are stored.
-- **Library values are copied into entries.** Fixing a library value later doesn't rewrite a user's history.
-- **Range loading in three queries.** `loadDays` fetches day logs, food and exercise for a whole date range with three indexed queries, whatever the range length.
+- **Local-first with an optional account.** Most people want a private tracker, not another login. The server only stores an opt-in backup.
+- **Bring your own AI, called from the device.** No AI bill for the project, no keys on the server, and users can switch providers at any time. Two request formats (Anthropic's and the OpenAI-style one) cover every supported provider. The client adapts to newer reasoning models: it uses `max_completion_tokens`, gives "thinking" models more room, and retries once if a reply is cut off.
+- **The AI proposes, the user decides.** Photo, Say it and Coach always end in a review step or an Add button, so a wrong guess never changes the log silently.
+- **Tolerant JSON parsing.** Replies are read even with code fences, chatter around the JSON, unit strings ("520 千卡") or keys in four languages.
+- **Canonical units.** Everything is stored in kg, cm, kcal and mg/g/µg, and converted for display.
+- **Honest partial data.** Foods without nutrient estimates are counted in the Today card ("based on 2 of 3 foods") instead of silently lowering the totals.
 
 ## Translations
 
-All interface text lives in `web/i18n.js`, one table per language with shared keys (for example `"tab.today"`). Placeholders like `{meal}` are filled in at run time, and a key ending in `_one` is used for a count of 1. The same file translates the shared food and activity library and serving sizes for display and search. To add a language, copy the `en` table, translate it, and add the code to `LANGS` (and to the `language` check in `server/src/routes/me.ts`).
-
-## Deployment
-
-**International (free tiers):**
-1. Create a PostgreSQL database on [Neon](https://neon.tech) or [Supabase](https://supabase.com) and copy its connection string.
-2. Create a Web Service on [Render](https://render.com) from this repository using the Dockerfile.
-3. Set `DATABASE_URL` and `JWT_SECRET` (a long random string) as environment variables. Migrations run automatically on start.
-
-**Mainland China (for the WeChat Mini Program):** mini program API domains must use HTTPS and be whitelisted in the mini program console. In practice they also need ICP filing (备案), which usually means hosting in mainland China, for example on Tencent Cloud or WeChat Cloud Run (微信云托管), which runs this Dockerfile as is. Set `WECHAT_APPID` and `WECHAT_SECRET` to enable `/api/auth/wechat`.
+Phone app text lives in `mobile/src/lib/i18n/strings.ts`, one table per language. TypeScript checks that every language has every key. The food and activity library translations are in `mobile/src/lib/library.ts`. The earlier web client uses `web/i18n.js`.
 
 ## Roadmap
 
-- [x] **v0.1:** frontend-only tracker (browser storage)
-- [x] **v0.2:** full stack: accounts, REST API, PostgreSQL, tests, Docker, CI
-- [x] **v0.3:** quick add, "Ask your own AI" photo estimates, bilingual app name
-- [x] **v0.4:** English / 中文 / Français / Deutsch, planning future days
-- [x] **v0.99:** phone app (Expo): on-device storage, optional backup account, photo / voice logging and Coach with the user's own AI
-- [ ] **WeChat Mini Program client** with WeChat login, 斤 units, and WeChat Sports (微信运动) step import
-- [ ] **Push reminders.** Device tokens are already stored (`/api/push-tokens`); next comes a scheduled job plus Expo Push or WeChat subscription messages.
-- [ ] **Better photo estimates:** match AI-recognized foods against a food database (for example USDA FoodData Central), and add an on-device model option.
-- [ ] **Apple Health sync** for steps, workouts and active calories
-- [ ] **Wearables in the cloud.** Fitbit through the Google Health API; the legacy Fitbit Web API shuts down on October 30, 2026.
+- [x] **v0.1–0.4:** web tracker, full-stack API, quick add, copy-paste AI flow, four languages, planning ahead
+- [x] **v0.99:** phone app with on-device storage, your own AI (Photo, Say it, Coach), optional backup
+- [x] **v1.0:** nutrient tracking, AI fixes for newer models, Android APK and web app live
+- [ ] **Sync between devices:** merge logs day by day instead of replacing the whole backup
+- [ ] **In-app AI usage counter** with an optional daily cap
+- [ ] **iPhone app** through TestFlight / App Store (Apple Developer Program)
+- [ ] **Google Play** release
+- [ ] **Push reminders** (device tokens are already stored)
+- [ ] **WeChat Mini Program** with WeChat login and WeChat Sports steps
+- [ ] **Apple Health / wearables** for steps and workouts
 
 ## License
 
