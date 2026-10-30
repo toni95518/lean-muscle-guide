@@ -2,20 +2,17 @@
   "expo": {
     "name": "Lean Muscle Guide",
     "slug": "lean-muscle-guide",
-    "version": "0.99.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "leanmuscleguide",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F2F5F1"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.leanmuscleguide.app",
-      "config": { "usesNonExemptEncryption": false }
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.leanmuscleguide.app",
@@ -46,6 +43,15 @@
         {
           "cameraPermission": "Take a photo of your meal so your AI can estimate its calories.",
           "photosPermission": "Choose a photo of your meal so your AI can estimate its calories."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#F2F5F1"
         }
       ]
     ],
