@@ -2,7 +2,7 @@
 
 A full-stack nutrition and fitness tracker. The app shows its name in Chinese (薄肌理论指南) on Chinese-language phones and in English (Lean Muscle Theory Guide) everywhere else. Users log meals, workouts, water and body weight, and see daily calorie and macro targets calculated from their own profile. Data is stored per account in PostgreSQL behind a REST API. The mobile-first web client is built to be added to the iPhone Home Screen.
 
-**Version 0.3.1**: see [CHANGELOG.md](CHANGELOG.md).
+**Version 0.4.0**: see [CHANGELOG.md](CHANGELOG.md).
 
 ## Features
 
@@ -11,6 +11,8 @@ A full-stack nutrition and fitness tracker. The app shows its name in Chinese (�
 - **Food logging.** A shared library of about 45 foods, saved custom foods, and recent foods by meal. Servings are adjustable.
 - **Quick add.** Type calories eaten (with optional macros) or calories burned directly, for example a number from a menu, a label, or a watch. Minutes are optional.
 - **Ask your own AI.** The app gives a prompt in the user's language. They paste it into the AI app they already use (ChatGPT, Claude, 豆包, DeepSeek…) with a photo of the food, paste the reply back, review and edit the estimate, and log every item at once. Entries are tagged "AI" or "Quick".
+- **Four languages.** English, 中文, Français and Deutsch for the whole interface, including the food and activity library, number and date formats, and the AI prompt. It follows the device language by default; users can pick another on the sign-in screen or in Goals, and the choice is saved to their account.
+- **Plan ahead.** Move forward to any day up to a year ahead, or jump with the date picker, and add planned meals and workouts. Future days are marked as a plan. Water and weight are only logged for today or earlier.
 - **Exercise logging.** 24 activities with MET values. Calories burned are estimated from duration and body weight, and users can override the number.
 - **Water and weight.** Daily water in liters (tap a 250 ml glass) and weigh-ins. The latest weigh-in updates the profile, which feeds into targets and burn estimates.
 - **Trends.** A 7-day summary computed on the server: calories eaten vs. burned, average intake and protein, workouts, active minutes, logging streak and weight trend.
@@ -68,13 +70,56 @@ fuel-move/
 │   │   └── data/library.ts     Seed foods and activities
 │   ├── drizzle/                Generated SQL migrations
 │   └── tests/                  Unit tests + API integration tests
+├── mobile/                     Phone app (Expo / React Native), v0.99
+│   ├── src/app/                Screens (Expo Router): tabs, welcome, connect-ai, photo, say, add, account
+│   ├── src/components/         UI kit, review list, toast
+│   ├── src/lib/                On-device store, nutrition math, AI client + prompts, i18n, backup
+│   ├── app.json, eas.json      App config and build profiles
+│   └── locales/                App name per language (薄肌理论指南 / Lean Muscle)
 ├── web/index.html              Web client
+├── web/i18n.js                 Interface text in EN / ZH / FR / DE, plus library translations
 ├── Dockerfile
 ├── docker-compose.yml
 └── .github/workflows/ci.yml
 ```
 
-## Getting started
+## The phone app (v0.99)
+
+`mobile/` is a local-first iPhone and Android app built with Expo SDK 58.
+
+- **Everything stays on the phone.** The log, favorites and goals live in on-device storage. No sign-up is needed.
+- **AI-first logging, with the user's own AI.** Take a photo, or say what you ate and did in one sentence. The app sends it directly from the phone to the provider the user picked (Claude, ChatGPT, Gemini, DeepSeek, Qwen, Doubao, OpenRouter or any OpenAI-compatible API), then shows an editable review before anything is saved. The API key is kept in the phone's secure storage and never reaches this server.
+- **Coach.** A chat that knows the goal and the last 7 days. It can suggest meals for today or future days as cards that are added only when the user taps Add.
+- **Also:** favorites and "repeat yesterday", food library search, quick kcal in/out, exercise library with MET estimates, water in liters, weight in kg / lb / 斤, planning up to a year ahead, 7- and 30-day trends, and English / 中文 / Français / Deutsch.
+- **Optional backup account.** Signing in only uploads one JSON snapshot to `PUT /api/backup`, so the log can be restored on a new phone.
+
+### Try it on your phone (free)
+
+1. Install **Expo Go** from the App Store or Google Play.
+2. On your computer:
+   ```bash
+   cd mobile
+   npm install
+   npx expo start            # phone and computer on the same Wi-Fi
+   npx expo start --tunnel   # if they aren't (or the QR code won't connect)
+   ```
+3. Scan the QR code: with the Camera app on iPhone, or from inside Expo Go on Android.
+
+If Expo Go says the project needs a newer SDK, update Expo Go from the store.
+
+### Share an installable build
+
+- **Android (APK):** `npx eas-cli@latest build -p android --profile preview` (free Expo account). EAS gives you a download link; friends open it and install. Older Huawei phones running HarmonyOS 2–4 can install the APK too. **HarmonyOS NEXT (5+) cannot run Android apps**, so it isn't supported.
+- **iPhone:** friends without Expo Go need TestFlight, which requires the Apple Developer Program ($99/year): `npx eas-cli@latest build -p ios --profile production`, then `npx eas-cli@latest submit -p ios`.
+
+### Checks
+
+```bash
+cd mobile
+npm run typecheck                         # TypeScript
+npx expo export --platform web            # build that also runs in a browser
+```
+
 
 ### Option A: Docker (easiest)
 
@@ -136,7 +181,7 @@ Errors always have this shape:
 | GET | `/me` | | `{ user, profile, targets }` |
 | DELETE | `/me` | | 204; deletes the account and all its data |
 | GET | `/profile` | | `{ profile, targets }` |
-| PATCH | `/profile` | any of `sex, age, heightCm, weightKg, activity, goal, calorieOverride, proteinPerKg, waterGoal, weightUnit, heightUnit, setupComplete` | `{ profile, targets }` |
+| PATCH | `/profile` | any of `sex, age, heightCm, weightKg, activity, goal, calorieOverride, proteinPerKg, waterGoal, weightUnit, heightUnit, setupComplete, language` (`en`, `zh`, `fr`, `de` or `null` for the device language) | `{ profile, targets }` |
 | GET | `/targets` | | `{ bmr, tdee, kcal, protein, carbs, fat, water }` |
 | POST | `/push-tokens` | `{ platform, token }` | 204 |
 
@@ -147,7 +192,7 @@ Errors always have this shape:
 | GET | `/days?from=&to=` | | days with any data (366-day maximum) |
 | GET | `/days/:date` | | `{ date, food[], exercise[], waterGlasses, weightKg, totals }` |
 | PUT | `/days/:date/water` | `{ glasses }` | |
-| PUT | `/days/:date/weight` | `{ weightKg }` (or `null` to clear) | also updates the profile weight if it's the latest weigh-in |
+| PUT | `/days/:date/weight` | `{ weightKg }` (or `null` to clear) | also updates the profile weight if it's the latest weigh-in; 400 `future_weight` for future dates |
 | POST | `/days/:date/food` | `{ meal, foodId, quantity }`, or `{ meal, customFoodId, quantity }`, or `{ meal, name, kcal, protein?, carbs?, fat?, serving?, quantity?, saveAsCustom? }` | food entry |
 | POST | `/days/:date/food/batch` | `{ meal, source?, items: [{ name, kcal, protein?, carbs?, fat?, serving?, quantity? }] }` (up to 30) | `{ entries[] }` |
 | PATCH | `/food/:id` | any of `date, meal, quantity, name, serving, kcal, protein, carbs, fat` | food entry |
@@ -167,11 +212,19 @@ Errors always have this shape:
 | POST | `/activities/estimate` | `{ activityId \| met, minutes }` → `{ kcal }` |
 | GET | `/summary?to=&days=7` | daily series, averages, totals, streak, weight trend |
 
+### Backup (phone app)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/backup` | The account's latest snapshot, or 404 |
+| PUT | `/api/backup` | `{ data: Snapshot }`, up to 5 MB; replaces the previous one |
+| DELETE | `/api/backup` | Removes it |
+
 ### Ask your own AI
 
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/ai/food-prompt?lang=en\|zh&meal=` | `{ prompt }` for the user to paste into their AI with a food photo |
+| GET | `/ai/food-prompt?lang=en\|zh\|fr\|de&meal=` | `{ prompt }` for the user to paste into their AI with a food photo |
 | POST | `/ai/parse-food` | `{ text }` (the AI's reply) → `{ items[], notes, totals }`; 422 `ai_reply_unreadable` with a fix-it message if the reply can't be read |
 
 No model runs on the server, so there is no AI cost and the photo never reaches the server. The parser (`server/src/lib/aiFood.ts`) accepts the requested JSON format plus common variations: code fences, English or Chinese keys, values like "520 千卡", smart quotes, and bare arrays.
@@ -207,6 +260,10 @@ This logic lives in `server/src/lib/nutrition.ts` as pure functions with unit te
 - **Library values are copied into entries.** Fixing a library value later doesn't rewrite a user's history.
 - **Range loading in three queries.** `loadDays` fetches day logs, food and exercise for a whole date range with three indexed queries, whatever the range length.
 
+## Translations
+
+All interface text lives in `web/i18n.js`, one table per language with shared keys (for example `"tab.today"`). Placeholders like `{meal}` are filled in at run time, and a key ending in `_one` is used for a count of 1. The same file translates the shared food and activity library and serving sizes for display and search. To add a language, copy the `en` table, translate it, and add the code to `LANGS` (and to the `language` check in `server/src/routes/me.ts`).
+
 ## Deployment
 
 **International (free tiers):**
@@ -221,10 +278,11 @@ This logic lives in `server/src/lib/nutrition.ts` as pure functions with unit te
 - [x] **v0.1:** frontend-only tracker (browser storage)
 - [x] **v0.2:** full stack: accounts, REST API, PostgreSQL, tests, Docker, CI
 - [x] **v0.3:** quick add, "Ask your own AI" photo estimates, bilingual app name
+- [x] **v0.4:** English / 中文 / Français / Deutsch, planning future days
+- [x] **v0.99:** phone app (Expo): on-device storage, optional backup account, photo / voice logging and Coach with the user's own AI
 - [ ] **WeChat Mini Program client** with WeChat login, 斤 units, and WeChat Sports (微信运动) step import
-- [ ] **iPhone app (React Native + Expo)** on the same API
 - [ ] **Push reminders.** Device tokens are already stored (`/api/push-tokens`); next comes a scheduled job plus Expo Push or WeChat subscription messages.
-- [ ] **Photo food logging.** A vision model identifies foods and portions, nutrients come from a food database (for example USDA FoodData Central), and the user confirms before saving. Pluggable providers: Apple's on-device model, a local open model, or the user's own API key.
+- [ ] **Better photo estimates:** match AI-recognized foods against a food database (for example USDA FoodData Central), and add an on-device model option.
 - [ ] **Apple Health sync** for steps, workouts and active calories
 - [ ] **Wearables in the cloud.** Fitbit through the Google Health API; the legacy Fitbit Web API shuts down on October 30, 2026.
 

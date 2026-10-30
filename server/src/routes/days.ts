@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "../db";
 import { activities, customFoods, dayLogs, exerciseEntries, foodEntries, foods, profiles } from "../db/schema";
-import { daysBetween, isoDate } from "../lib/dates";
+import { addDays, daysBetween, isoDate } from "../lib/dates";
 import { HttpError, notFound } from "../lib/errors";
 import { caloriesBurned } from "../lib/nutrition";
 import { dateParam, idParam } from "../lib/params";
@@ -47,6 +47,11 @@ daysRouter.put("/days/:date/weight", async (req, res) => {
   const userId = uid(req);
   const date = dateParam(req);
   const { weightKg } = z.object({ weightKg: z.number().min(25).max(400).nullable() }).parse(req.body);
+  // Future days can hold planned meals and workouts, but not a weigh-in: it would
+  // become the "latest" weight and change today's targets. (+1 day allows for time zones.)
+  if (weightKg != null && date > addDays(new Date().toISOString().slice(0, 10), 1)) {
+    throw new HttpError(400, "future_weight", "You can only log weight for today or earlier");
+  }
   const value = weightKg == null ? null : Math.round(weightKg * 100) / 100;
   await db
     .insert(dayLogs)

@@ -261,6 +261,28 @@ describe("quick add and AI-assisted logging", () => {
   });
 });
 
+describe("language and planning ahead", () => {
+  it("saves the interface language on the profile", async () => {
+    const { auth, body } = await signUp();
+    expect(body.profile.language).toBeNull();
+    const res = await api().patch("/api/profile").set(auth).send({ language: "fr" });
+    expect(res.body.profile.language).toBe("fr");
+    expect((await api().patch("/api/profile").set(auth).send({ language: "es" })).status).toBe(400);
+    expect((await api().patch("/api/profile").set(auth).send({ language: null })).body.profile.language).toBeNull();
+  });
+
+  it("lets users plan food and exercise for future days, but not weigh-ins", async () => {
+    const { auth } = await signUp();
+    const future = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+    expect((await api().post(`/api/days/${future}/food`).set(auth).send({ meal: "dinner", name: "Planned pasta", kcal: 650 })).status).toBe(201);
+    expect((await api().post(`/api/days/${future}/exercise`).set(auth).send({ name: "Long run", kcal: 700 })).status).toBe(201);
+    const w = await api().put(`/api/days/${future}/weight`).set(auth).send({ weightKg: 60 });
+    expect(w.status).toBe(400);
+    expect(w.body.error.code).toBe("future_weight");
+    expect((await api().get(`/api/days/${future}`).set(auth)).body.totals).toMatchObject({ kcal: 650, burned: 700 });
+  });
+});
+
 describe("account", () => {
   it("deletes the account and all its data", async () => {
     const { auth } = await signUp();

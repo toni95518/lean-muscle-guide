@@ -6,6 +6,8 @@ describe("foodPrompt", () => {
     expect(foodPrompt("en", "lunch")).toContain("my lunch");
     expect(foodPrompt("zh", "dinner")).toContain("晚餐");
     expect(foodPrompt("zh")).toContain('"kcal"');
+    expect(foodPrompt("fr", "breakfast")).toContain("petit-déjeuner");
+    expect(foodPrompt("de", "lunch")).toContain("Mittagessen");
   });
 });
 
@@ -29,6 +31,13 @@ Enjoy your meal.`;
   it("accepts Chinese keys, unit strings, and a bare array", () => {
     const r = parseAiFoodReply('[{"食物":"牛肉面","份量":"一碗","热量":"约520千卡","蛋白质":"30g","碳水":"60克","脂肪":16}]');
     expect(r.items[0]).toMatchObject({ name: "牛肉面", serving: "一碗", kcal: 520, protein: 30, carbs: 60, fat: 16 });
+  });
+
+  it("accepts French and German keys", () => {
+    const fr = parseAiFoodReply('{"aliments":[{"nom":"Croissant","quantité":"1","calories":"231 kcal","protéines":5,"glucides":26,"lipides":12}]}');
+    expect(fr.items[0]).toMatchObject({ name: "Croissant", kcal: 231, protein: 5, carbs: 26, fat: 12 });
+    const de = parseAiFoodReply('[{"Lebensmittel":"Brezel","Menge":"1 Stück","Kalorien":220,"Eiweiß":6,"Kohlenhydrate":45,"Fett":2}]');
+    expect(de.items[0]).toMatchObject({ name: "Brezel", serving: "1 Stück", kcal: 220, protein: 6, carbs: 45, fat: 2 });
   });
 
   it("accepts common English variants like calories and protein_g", () => {

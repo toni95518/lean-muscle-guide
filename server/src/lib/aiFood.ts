@@ -6,7 +6,7 @@
 // No model runs on our server, so there is no API cost and the photo never
 // reaches us. A future version can call a model directly through the same parser.
 
-export type Lang = "en" | "zh";
+export type Lang = "en" | "zh" | "fr" | "de";
 export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface AiFoodItem {
@@ -27,6 +27,8 @@ export interface AiFoodResult {
 const MEAL_NAMES: Record<Lang, Record<Meal, string>> = {
   en: { breakfast: "breakfast", lunch: "lunch", dinner: "dinner", snack: "snack" },
   zh: { breakfast: "早餐", lunch: "午餐", dinner: "晚餐", snack: "加餐" },
+  fr: { breakfast: "petit-déjeuner", lunch: "déjeuner", dinner: "dîner", snack: "en-cas" },
+  de: { breakfast: "Frühstück", lunch: "Mittagessen", dinner: "Abendessen", snack: "Snack" },
 };
 
 export function foodPrompt(lang: Lang, meal?: Meal): string {
@@ -41,6 +43,32 @@ export function foodPrompt(lang: Lang, meal?: Meal): string {
       "```",
       "要求：热量单位为千卡（kcal），蛋白质、碳水、脂肪单位为克，全部取整数。",
       "看不清的地方请给出最合理的估计，并在 notes 里说明。",
+    ].join("\n");
+  }
+  if (lang === "fr") {
+    const what = meal ? `mon ${MEAL_NAMES.fr[meal]}` : "mon repas";
+    return [
+      `Tu es un assistant en nutrition. Je joins une photo de ${what} (ou je le décris).`,
+      "Identifie chaque aliment, estime la portion, puis estime ses calories et ses macronutriments.",
+      "Réponds UNIQUEMENT en JSON, exactement dans ce format, sans autre texte :",
+      "```json",
+      '{"items":[{"name":"Blanc de poulet grillé","portion":"environ 150 g","kcal":248,"protein":46,"carbs":0,"fat":5}],"notes":"une phrase courte sur tes hypothèses"}',
+      "```",
+      "Utilise les kcal pour l'énergie et les grammes pour les protéines, glucides et lipides, arrondis à l'entier.",
+      "Si quelque chose n'est pas clair, donne ta meilleure estimation et précise-le dans notes.",
+    ].join("\n");
+  }
+  if (lang === "de") {
+    const what = meal ? `meinem ${MEAL_NAMES.de[meal]}` : "meinem Essen";
+    return [
+      `Du bist ein Ernährungsassistent. Ich hänge ein Foto von ${what} an (oder beschreibe es).`,
+      "Erkenne jedes Lebensmittel, schätze die Portion und schätze Kalorien und Makronährstoffe.",
+      "Antworte NUR mit JSON in genau diesem Format, ohne weiteren Text:",
+      "```json",
+      '{"items":[{"name":"Gegrillte Hähnchenbrust","portion":"ca. 150 g","kcal":248,"protein":46,"carbs":0,"fat":5}],"notes":"ein kurzer Satz zu deinen Annahmen"}',
+      "```",
+      "Verwende kcal für Energie und Gramm für Eiweiß, Kohlenhydrate und Fett, auf ganze Zahlen gerundet.",
+      "Wenn etwas unklar ist, gib deine beste Schätzung ab und erwähne es in notes.",
     ].join("\n");
   }
   const what = meal ? `my ${MEAL_NAMES.en[meal]}` : "my food";
@@ -60,12 +88,12 @@ export class AiParseError extends Error {}
 
 // Field names assistants commonly use, in English and Chinese.
 const KEYS = {
-  name: ["name", "food", "item", "dish", "名称", "食物", "菜品", "名字"],
-  serving: ["portion", "serving", "amount", "quantity", "size", "份量", "分量", "重量", "数量"],
-  kcal: ["kcal", "calories", "calorie", "cal", "energy", "热量", "卡路里", "千卡", "能量"],
-  protein: ["protein", "protein_g", "proteins", "蛋白质", "蛋白"],
-  carbs: ["carbs", "carbs_g", "carb", "carbohydrate", "carbohydrates", "碳水", "碳水化合物"],
-  fat: ["fat", "fat_g", "fats", "脂肪"],
+  name: ["name", "food", "item", "dish", "名称", "食物", "菜品", "名字", "nom", "aliment", "plat", "lebensmittel", "gericht"],
+  serving: ["portion", "serving", "amount", "quantity", "size", "份量", "分量", "重量", "数量", "quantité", "menge", "größe"],
+  kcal: ["kcal", "calories", "calorie", "cal", "energy", "热量", "卡路里", "千卡", "能量", "énergie", "kalorien", "energie"],
+  protein: ["protein", "protein_g", "proteins", "蛋白质", "蛋白", "protéines", "proteines", "eiweiß", "eiweiss", "proteine"],
+  carbs: ["carbs", "carbs_g", "carb", "carbohydrate", "carbohydrates", "碳水", "碳水化合物", "glucides", "kohlenhydrate"],
+  fat: ["fat", "fat_g", "fats", "脂肪", "lipides", "graisses", "fett"],
 };
 
 function pick(obj: Record<string, unknown>, keys: string[]): unknown {
@@ -120,9 +148,9 @@ export function parseAiFoodReply(text: string): AiFoodResult {
   const list: unknown[] = Array.isArray(data)
     ? data
     : data && typeof data === "object"
-      ? ((pick(data as Record<string, unknown>, ["items", "foods", "食物", "列表"]) as unknown[]) ?? [data])
+      ? ((pick(data as Record<string, unknown>, ["items", "foods", "食物", "列表", "aliments", "lebensmittel"]) as unknown[]) ?? [data])
       : [];
-  const notesRaw = data && typeof data === "object" && !Array.isArray(data) ? pick(data as Record<string, unknown>, ["notes", "note", "备注", "说明"]) : undefined;
+  const notesRaw = data && typeof data === "object" && !Array.isArray(data) ? pick(data as Record<string, unknown>, ["notes", "note", "备注", "说明", "remarques", "hinweise"]) : undefined;
 
   const items: AiFoodItem[] = [];
   for (const entry of Array.isArray(list) ? list : []) {

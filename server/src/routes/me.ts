@@ -40,6 +40,7 @@ const profilePatch = z
     weightUnit: z.enum(["kg", "lb", "jin"]),
     heightUnit: z.enum(["cm", "ftin"]),
     setupComplete: z.boolean(),
+    language: z.enum(["en", "zh", "fr", "de"]).nullable(),
   })
   .partial()
   .strict();

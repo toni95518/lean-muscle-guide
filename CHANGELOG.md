@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.99.0 (2026-10-28) — test build before release
+
+- Added the **phone app** (`mobile/`, Expo SDK 58) for iPhone and Android. It's local-first: everything is stored on the phone and no account is needed.
+- **Connect your AI:** pick Claude, ChatGPT, Gemini, DeepSeek, Qwen, Doubao, OpenRouter or any OpenAI-compatible API, paste a key, load and test models. The key is kept in secure storage and requests go straight from the phone to the provider (no more copy-paste).
+- **Photo** and **Say it** (keyboard dictation): the AI returns foods and exercise from one photo or sentence, shown in an editable review (names, kcal, portions) before anything is added.
+- **Coach:** chat that knows your goal and last 7 days; suggested meals and workouts appear as cards you can add to today or a future day.
+- **Favorites:** long-press any food to star it, one-tap re-add, "repeat yesterday's meal", recent foods.
+- Trends (7 / 30 days, streak, weight line), goals, language, erase-all.
+- **Optional backup account:** new `GET / PUT / DELETE /api/backup` endpoints, `backups` table (migration `0003`) and 7 tests (48 in total).
+
+## 0.4.0 (2026-10-23)
+
+- The whole interface is now available in **English, 中文, Français and Deutsch**. That includes the food and activity library, serving sizes, error messages, number and date formats, and the "Ask your AI" prompt. The app follows the device language by default. Users can choose another language on the sign-in screen or in Goals, and the choice is saved to their account.
+- Added **planning ahead**: go forward up to a year, or jump to any date with the date picker, and add planned meals and workouts. Future days show a "planning ahead" note and hide water and weight.
+- The server rejects weigh-ins for future dates, so a planned day can't change today's targets.
+- Moved all interface text to `web/i18n.js`. The client reaches the server only through one data layer, ready for an on-device mode.
+- Added migration `0002` (profile language) and 3 tests (41 in total).
+
 ## 0.3.1 (2026-10-23)
 
 - Water is shown in liters. One tap is a 250 ml glass, set by `GLASS_ML` in `web/index.html`. The Today card, Trends and the water goal (entered in liters, 0.25–5 L) all use liters. Stored data is unchanged: the app still saves glass counts.

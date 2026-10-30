@@ -15,6 +15,20 @@
       "when": 1792739514754,
       "tag": "0001_quick_and_ai_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792742118023,
+      "tag": "0002_profile_language",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793254637038,
+      "tag": "0003_backups",
+      "breakpoints": true
     }
   ]
 }

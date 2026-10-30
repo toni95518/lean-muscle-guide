@@ -9,7 +9,7 @@ export const aiRouter = Router();
 aiRouter.get("/ai/food-prompt", (req, res) => {
   const { lang, meal } = z
     .object({
-      lang: z.enum(["en", "zh"]).default("en"),
+      lang: z.enum(["en", "zh", "fr", "de"]).default("en"),
       meal: z.enum(["breakfast", "lunch", "dinner", "snack"]).optional(),
     })
     .parse(req.query);

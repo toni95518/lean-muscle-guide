@@ -9,6 +9,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   real,
@@ -73,6 +74,8 @@ export const profiles = pgTable("profiles", {
   weightUnit: weightUnitEnum("weight_unit").notNull().default("lb"),
   heightUnit: heightUnitEnum("height_unit").notNull().default("ftin"),
   setupComplete: boolean("setup_complete").notNull().default(false),
+  // Interface language: "en" | "zh" | "fr" | "de". Null = follow the device language.
+  language: text("language"),
   updatedAt: updatedAt(),
 });
 
@@ -189,6 +192,16 @@ export const pushTokens = pgTable(
   },
   (t) => [index("push_tokens_user").on(t.userId)],
 );
+
+// One backup per account: a snapshot of the phone's on-device log (the mobile app is local-first).
+export const backups = pgTable("backups", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  data: jsonb("data").notNull(),
+  bytes: integer("bytes").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles),

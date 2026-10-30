@@ -11,6 +11,7 @@ import { libraryRouter } from "./routes/library";
 import { meRouter } from "./routes/me";
 import { summaryRouter } from "./routes/summary";
 import { aiRouter } from "./routes/ai";
+import { backupRouter } from "./routes/backup";
 import { pool } from "./db";
 
 export function createApp() {
@@ -36,6 +37,8 @@ export function createApp() {
   );
   const origins = env.CORS_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean);
   if (origins.length) app.use("/api", cors({ origin: origins }));
+  // Phone backups can be a few MB; everything else stays small.
+  app.use("/api/backup", express.json({ limit: "6mb" }));
   app.use(express.json({ limit: "100kb" }));
 
   app.get("/api/health", async (_req, res) => {
@@ -44,7 +47,7 @@ export function createApp() {
   });
 
   app.use("/api/auth", authRouter);
-  app.use("/api", requireAuth, meRouter, daysRouter, libraryRouter, summaryRouter, aiRouter);
+  app.use("/api", requireAuth, meRouter, daysRouter, libraryRouter, summaryRouter, aiRouter, backupRouter);
   app.use("/api", notFoundHandler);
 
   // The web client
