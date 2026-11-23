@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSend } from "../../components/icons";
 import { NeedsAi } from "../../components/logflow";
@@ -84,6 +85,17 @@ export default function Coach() {
                 <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: 18, borderBottomLeftRadius: 6, paddingVertical: 10, paddingHorizontal: 14 }}>
                   <Text style={{ color: C.ink, fontSize: 15, lineHeight: 21 }}>{m.text}</Text>
                 </View>
+                {!m.actions?.length && m.text !== "…" ? (
+                  // The AI answered without addable items (common with fast "lite" models):
+                  // send this exchange through the Say it reader instead.
+                  <Pressable accessibilityRole="button" hitSlop={8} style={{ alignSelf: "flex-start", paddingHorizontal: 6 }}
+                    onPress={() => {
+                      const asked = [...msgs.slice(0, msgs.indexOf(m))].reverse().find((x) => x.role === "user")?.text ?? "";
+                      router.push({ pathname: "/say", params: { text: `${asked}\n${m.text}`.trim(), auto: "1" } });
+                    }}>
+                    <Text style={{ color: C.accent, fontWeight: "700", fontSize: 13.5 }}>{t("coach.toLog")}</Text>
+                  </Pressable>
+                ) : null}
                 {(m.actions ?? []).map((a, i) => {
                   const done = m.doneActions?.includes(i);
                   const total = a.type === "add_food" ? a.items.reduce((x, it) => x + it.kcal * (it.quantity || 1), 0) : a.items.reduce((x, it) => x + it.kcal, 0);
@@ -95,9 +107,9 @@ export default function Coach() {
                       {a.items.map((it, j) => (
                         <View key={j} style={[s.row, { justifyContent: "space-between" }]}>
                           <Text style={{ flex: 1, color: C.ink, fontSize: 14 }}>
-                            {it.name}{"serving" in it && it.serving ? ` · ${it.serving}` : ""}{"minutes" in it && it.minutes ? ` · ${it.minutes} ${t("unit.min")}` : ""}
+                            {"quantity" in it && it.quantity && it.quantity !== 1 ? `${f.dec(it.quantity, 2)} × ` : ""}{it.name}{"serving" in it && it.serving ? ` · ${app.serving(it.serving)}` : ""}{"minutes" in it && it.minutes ? ` · ${it.minutes} ${t("unit.min")}` : ""}
                           </Text>
-                          <Text style={[T.num, { color: a.type === "add_exercise" ? C.burn : C.ink }]}>{f.int(it.kcal)}</Text>
+                          <Text style={[T.num, { color: a.type === "add_exercise" ? C.burn : C.ink }]}>{f.int(it.kcal * ("quantity" in it && it.quantity ? it.quantity : 1))}</Text>
                         </View>
                       ))}
                       <View style={[s.row, { justifyContent: "space-between", borderTopWidth: 1, borderTopColor: C.sunk, paddingTop: 8 }]}>

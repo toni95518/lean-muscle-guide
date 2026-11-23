@@ -14,7 +14,7 @@ export type ReviewRow =
 
 export function toRows(foods: ParsedFood[], exercises: NewExercise[]): ReviewRow[] {
   return [
-    ...foods.map((food, i) => ({ key: "f" + i, kind: "food" as const, food, on: true, scale: 1 })),
+    ...foods.map((food, i) => ({ key: "f" + i, kind: "food" as const, food, on: true, scale: food.quantity || 1 })),
     ...exercises.map((ex, i) => ({ key: "e" + i, kind: "ex" as const, ex, on: true })),
   ];
 }

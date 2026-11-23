@@ -13,6 +13,7 @@ export interface AiRequest {
   system: string;
   messages: AiMessage[];
   maxTokens?: number;
+  json?: boolean; // ask OpenAI-style providers for JSON output mode (dropped automatically if refused)
 }
 
 export type AiErrorCode = "no_key" | "auth" | "quota" | "network" | "no_image" | "bad_model" | "empty" | "other";
@@ -25,7 +26,7 @@ export class AiError extends Error {
 const TIMEOUT_MS = 90_000;
 
 /** "Unsupported parameter: 'max_tokens'…", "temperature does not support 0.2…" and similar. */
-const isParamError = (msg: string) => /max_tokens|max_completion_tokens|temperature|unsupported (parameter|value)/i.test(msg);
+const isParamError = (msg: string) => /max_tokens|max_completion_tokens|temperature|response_format|json mode|unsupported (parameter|value)/i.test(msg);
 
 async function call(url: string, init: RequestInit): Promise<any> {
   const ctl = new AbortController();
@@ -117,22 +118,34 @@ export async function complete(cfg: AiConfig, key: string | null, req: AiRequest
   const limit = (req.maxTokens ?? 1500) * (thinks ? 4 : 1);
   // OpenAI's newer models reject max_tokens and a custom temperature ("modern" style);
   // most other OpenAI-style providers want the classic parameters.
-  const build = (style: "modern" | "classic", max: number) =>
-    style === "modern" ? { model: cfg.model, max_completion_tokens: max, messages } : { model: cfg.model, max_tokens: max, temperature: 0.2, messages };
+  // JSON mode makes models (especially fast "lite" ones) answer in the requested format instead of chatting.
+  let json = !!req.json;
+  const build = (style: "modern" | "classic", max: number) => ({
+    ...(style === "modern" ? { model: cfg.model, max_completion_tokens: max, messages } : { model: cfg.model, max_tokens: max, temperature: 0.2, messages }),
+    ...(json ? { response_format: { type: "json_object" } } : {}),
+  });
   const send = (body: object) => call(`${base}/chat/completions`, { method: "POST", headers: headers(cfg, key), body: JSON.stringify(body) });
   let style: "modern" | "classic" = cfg.provider === "openai" ? "modern" : "classic";
-  let json: any;
+  let res: any;
   try {
-    json = await send(build(style, limit));
+    res = await send(build(style, limit));
   } catch (e) {
-    // Retry once with the other parameter style if the provider says one isn't supported.
     if (!(e instanceof AiError && isParamError(e.message))) throw e;
-    style = style === "modern" ? "classic" : "modern";
-    json = await send(build(style, limit));
+    if (json && /response_format|json/i.test(e.message)) json = false; // provider has no JSON mode: plain request
+    else style = style === "modern" ? "classic" : "modern"; // the other parameter style
+    try {
+      res = await send(build(style, limit));
+    } catch (e2) {
+      // Both problems at once (e.g. no JSON mode and the other parameter style): one last plain try.
+      if (!(e2 instanceof AiError && isParamError(e2.message))) throw e2;
+      json = false;
+      style = style === "modern" ? "classic" : "modern";
+      res = await send(build(style, limit));
+    }
   }
   // Cut off at the limit (finish_reason "length"): try once more with 3× the room.
-  if (json?.choices?.[0]?.finish_reason === "length") json = await send(build(style, limit * 3));
-  const content = json?.choices?.[0]?.message?.content;
+  if (res?.choices?.[0]?.finish_reason === "length") res = await send(build(style, limit * 3));
+  const content = res?.choices?.[0]?.message?.content;
   const out = (Array.isArray(content) ? content.map((c: any) => c?.text ?? "").join("\n") : String(content ?? "")).trim();
   if (!out) throw new AiError("empty", "empty");
   return out;

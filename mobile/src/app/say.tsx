@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { IconMic } from "../components/icons";
 import { NeedsAi, ReviewStep, Thinking } from "../components/logflow";
@@ -17,12 +17,12 @@ function guessMeal(): Meal {
 }
 
 export default function SayIt() {
-  const params = useLocalSearchParams<{ date?: string; meal?: string }>();
+  const params = useLocalSearchParams<{ date?: string; meal?: string; text?: string; auto?: string }>();
   const app = useApp();
   const { t, settings, lang, profile } = app;
   const date = isDateKey(params.date) ? params.date : today();
   const [meal, setMeal] = useState<Meal>(MEALS.includes(params.meal as Meal) ? (params.meal as Meal) : guessMeal());
-  const [text, setText] = useState("");
+  const [text, setText] = useState(typeof params.text === "string" ? params.text : "");
   const [phase, setPhase] = useState<"write" | "thinking" | "review">("write");
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [notes, setNotes] = useState<string | null>(null);
@@ -43,6 +43,15 @@ export default function SayIt() {
       setPhase("write");
     }
   };
+
+  // Opened from Coach's "Add to log" link: read the text right away.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (params.auto === "1" && !autoRan.current && ready && text.trim()) {
+      autoRan.current = true;
+      read();
+    }
+  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Screen>

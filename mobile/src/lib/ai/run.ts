@@ -24,6 +24,7 @@ export async function analyzeLog(cfg: AiConfig, lang: Lang, weightKg: number, in
     system: logSystemPrompt(lang, weightKg, input.nutrients),
     messages: [{ role: "user", text: logUserPrompt({ meal: input.meal, note: input.note, text: input.text, hasPhoto: !!input.photoBase64 }), imageBase64: input.photoBase64 }],
     maxTokens: 1500,
+    json: true,
   });
   try {
     return parseLogReply(reply);
@@ -41,6 +42,7 @@ export async function coachTurn(cfg: AiConfig, lang: Lang, ctx: CoachContext, hi
     system: coachSystemPrompt(lang, ctx),
     messages: [...recent, { role: "user" as const, text: message }],
     maxTokens: 1200,
+    json: true,
   });
   try {
     return parseCoachReply(reply, ctx.today);

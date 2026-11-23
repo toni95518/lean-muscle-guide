@@ -78,15 +78,20 @@ export function toFood(o: unknown): ParsedFood | null {
     return v != null && v >= 0 && v <= 1000 ? r1(v) : 0;
   };
   const conf = String(r.confidence ?? "").toLowerCase();
+  // A numeric "quantity"/"count" is how many portions (2 bananas at 105 kcal each); a text one is the portion size.
+  const qRaw = r.quantity ?? r.qty ?? r.count ?? r.servings;
+  const qNumeric = typeof qRaw === "number" || (typeof qRaw === "string" && /^\s*\d+(\.\d+)?\s*$/.test(qRaw));
+  const qty = qNumeric ? Number(qRaw) : 1;
+  const servingRaw = pick(r, qNumeric ? KEYS.serving.filter((k) => k !== "quantity" && k !== "数量") : KEYS.serving);
   return {
     name: name.slice(0, 120),
-    serving: String(pick(r, KEYS.serving) ?? "").trim().slice(0, 60) || "1 serving",
+    serving: String(servingRaw ?? "").trim().slice(0, 60) || "1 serving",
     kcal: Math.round(kcal),
     protein: m(KEYS.protein),
     carbs: m(KEYS.carbs),
     fat: m(KEYS.fat),
     micros: readMicros(r, num),
-    quantity: 1,
+    quantity: qty > 0 && qty <= 20 ? qty : 1,
     meal: asMeal(r.meal),
     confidence: conf === "high" || conf === "medium" || conf === "low" ? conf : undefined,
   };
@@ -117,25 +122,39 @@ export function parseLogReply(text: string): ParsedLog {
   return { foods, exercises, notes: typeof notes === "string" && notes.trim() ? notes.trim().slice(0, 300) : null };
 }
 
-/** Reads the coach's reply: a message plus proposed actions. Plain text is accepted as a message. */
+/** Reads the coach's reply: a message plus proposed actions. Plain text is accepted as a message.
+ *  Lenient on purpose: fast "lite" models often bend the format (an object instead of a list,
+ *  "addFood" instead of "add_food", the food fields on the action itself, a missing date). */
 export function parseCoachReply(text: string, fallbackDate: string): { reply: string; actions: CoachAction[] } {
   const data = extractJson(text);
-  if (!data || typeof data !== "object" || Array.isArray(data)) return { reply: text.trim(), actions: [] };
-  const o = data as Record<string, unknown>;
-  const reply = typeof o.reply === "string" && o.reply.trim() ? o.reply.trim() : text.replace(/```[\s\S]*?```/g, "").trim();
+  if (!data || typeof data !== "object") return { reply: text.trim(), actions: [] };
+  const o = (Array.isArray(data) ? { actions: data } : data) as Record<string, unknown>;
+  const rawReply = pick(o, ["reply", "message", "text", "answer", "回复", "réponse", "antwort"]);
+  const reply = typeof rawReply === "string" && rawReply.trim() ? rawReply.trim() : Array.isArray(data) ? "" : text.replace(/```[\s\S]*?```/g, "").replace(/\{[\s\S]*\}/, "").trim();
+  let list = pick(o, ["actions", "action", "suggestions", "items", "foods", "log"]);
+  if (list && !Array.isArray(list)) list = [list];
   const actions: CoachAction[] = [];
-  for (const a of Array.isArray(o.actions) ? o.actions : []) {
+  for (const a of Array.isArray(list) ? list : []) {
     if (!a || typeof a !== "object") continue;
     const r = a as Record<string, unknown>;
+    const type = String(r.type ?? r.kind ?? r.action ?? "").toLowerCase().replace(/[^a-z]/g, "");
     const date = isDateKey(r.date) ? r.date : fallbackDate;
-    const items = Array.isArray(r.items) ? r.items : [];
-    if (r.type === "add_food") {
-      const foods = items.map(toFood).filter((x): x is ParsedFood => !!x);
-      if (foods.length) actions.push({ type: "add_food", date, meal: asMeal(r.meal) ?? "snack", items: foods });
-    } else if (r.type === "add_exercise") {
+    // Items may be a list, a single object, or the action itself may be the item.
+    const rawItems = r.items ?? r.foods ?? r.exercises ?? r.food ?? r.exercise;
+    const items: unknown[] = Array.isArray(rawItems) ? rawItems : rawItems && typeof rawItems === "object" ? [rawItems] : [r];
+    const isExercise = /exercise|workout|activity/.test(type) || (!type && items.every((i) => i && typeof i === "object" && "minutes" in (i as object) && !("protein" in (i as object))));
+    if (isExercise) {
       const ex = items.map(toExercise).filter((x): x is NewExercise => !!x);
       if (ex.length) actions.push({ type: "add_exercise", date, items: ex });
+    } else if (!type || /food|meal|log|eat|add/.test(type)) {
+      const foods = items.map(toFood).filter((x): x is ParsedFood => !!x);
+      if (foods.length) actions.push({ type: "add_food", date, meal: asMeal(r.meal) ?? foods[0].meal ?? guessMealNow(), items: foods });
     }
   }
   return { reply: reply || "…", actions: actions.slice(0, 6) };
+}
+
+function guessMealNow(): Meal {
+  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  return h < 10.5 ? "breakfast" : h < 14.5 ? "lunch" : h >= 17 && h < 21 ? "dinner" : "snack";
 }

@@ -206,6 +206,7 @@ const en = {
   "coach.suggestEx": "Exercise · {date}",
   "coach.add": "Add",
   "coach.addedShort": "Added ✓",
+  "coach.toLog": "Add to log…",
   "coach.added": "Added to {date}",
 
   "trends.title": "Trends",
@@ -587,6 +588,7 @@ const zh: Table = {
   "coach.suggestEx": "运动 · {date}",
   "coach.add": "添加",
   "coach.addedShort": "已添加 ✓",
+  "coach.toLog": "加入日志…",
   "coach.added": "已添加到{date}",
 
   "trends.title": "趋势",
@@ -967,6 +969,7 @@ const fr: Table = {
   "coach.suggestEx": "Sport · {date}",
   "coach.add": "Ajouter",
   "coach.addedShort": "Ajouté ✓",
+  "coach.toLog": "Ajouter au journal…",
   "coach.added": "Ajouté à {date}",
 
   "trends.title": "Tendances",
@@ -1347,6 +1350,7 @@ const de: Table = {
   "coach.suggestEx": "Sport · {date}",
   "coach.add": "Hinzufügen",
   "coach.addedShort": "Hinzugefügt ✓",
+  "coach.toLog": "Ins Tagebuch…",
   "coach.added": "Zu {date} hinzugefügt",
 
   "trends.title": "Verlauf",

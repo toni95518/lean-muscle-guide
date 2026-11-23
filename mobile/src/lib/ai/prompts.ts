@@ -95,7 +95,9 @@ export function coachSystemPrompt(lang: Lang, ctx: CoachContext): string {
     "Reply ONLY with JSON in this shape:",
     `{"reply":"your message","actions":[{"type":"add_food","date":"${ctx.today}","meal":"dinner","items":[{"name":"Baked salmon","portion":"150 g","kcal":312,"protein":34,"carbs":0,"fat":19}]},{"type":"add_exercise","date":"${ctx.today}","items":[{"name":"Running","minutes":30,"kcal":350}]}]}`,
     ctx.profile.nutrients.length ? nutrientRule(ctx.profile.nutrients).replace("- Also estimate", "In add_food items, also include") : "",
-    "Use actions only when the user asks you to log, plan or suggest specific food or exercise. Planning a future day = add_food actions with that date (one action per meal). Otherwise use an empty actions list.",
+    "Whenever your reply names specific foods, meals or workouts the user could eat or do (a suggestion, a plan, an answer to \"what should I eat\", or something they say they ate or did), you MUST also list each of them in actions with your best estimate of kcal and macros, so the app can show an Add button. One add_food action per meal; a future day uses that date. Use an empty actions list only when the reply names no specific food or workout.",
+    'Example: user asks "What should I eat for dinner?" -> {"reply":"Try grilled salmon with rice and broccoli, about 600 kcal and 40 g protein.","actions":[{"type":"add_food","date":"' + ctx.today + '","meal":"dinner","items":[{"name":"Grilled salmon","portion":"150 g","kcal":310,"protein":34,"carbs":0,"fat":19},{"name":"Rice","portion":"1 cup cooked","kcal":205,"protein":4,"carbs":45,"fat":0},{"name":"Broccoli","portion":"1 cup","kcal":55,"protein":4,"carbs":11,"fat":1}]}]}',
+    "Your whole answer must be that single JSON object: no text before or after it, no code fences.",
     "This is general wellness guidance, not medical advice; suggest a professional for medical questions.",
   ]
     .filter(Boolean)
