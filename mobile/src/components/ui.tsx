@@ -237,7 +237,7 @@ export const s = StyleSheet.create({
   seg: { flexDirection: "row", backgroundColor: C.sunk, borderRadius: 12, padding: 3, gap: 2 },
   segItem: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 9, paddingHorizontal: 4, borderRadius: 9, minHeight: 40 },
   segOn: { backgroundColor: C.surface, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  input: { fontSize: 16, paddingVertical: 11, paddingHorizontal: 12, borderWidth: 1, borderColor: C.line, borderRadius: 12, backgroundColor: C.surface, color: C.ink, minHeight: 46 },
+  input: { fontSize: 16, paddingVertical: 11, paddingHorizontal: 12, borderWidth: 1, borderColor: C.line, borderRadius: 12, backgroundColor: C.surface, color: C.ink, minHeight: 46, minWidth: 0 }, // minWidth 0: let inputs shrink in rows (web text inputs have a built-in width)
   suffix: { position: "absolute", right: 12, color: C.muted, fontSize: 14 },
   tag: { fontSize: 10, fontWeight: "800", letterSpacing: 0.6, textTransform: "uppercase", borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1, overflow: "hidden", marginRight: 6 },
   check: { width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: C.line, alignItems: "center", justifyContent: "center", backgroundColor: C.surface },

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0 (2026-11-23) — App Store build
+
+- **Edit logged foods:** tap any food on Today to fix its name, portion, how many, meal, calories, macros and tracked nutrients (long-press still stars it). Delete has undo.
+- **Photos in Coach:** attach up to 3 photos (camera or library) with a message — a meal, or a nutrition label to read exactly and scale to what you ate.
+- **Reminders that open the app:** meal reminders (with Photo / Say it buttons), water (+1 glass button), evening check-in and weekly weigh-in. Local notifications only, planned 8 days ahead and skipped once that thing is logged. iPhone and Android, not web.
+- **Coach fixes (1.0.1):** fast "lite" models now return Add buttons (JSON mode, a stricter prompt, a lenient reader) and an "Add to log…" fallback when they don't; AI quantities (2 × banana) are kept.
+- **Delete account** in Me → Backup account (Apple guideline 5.1.1(v)); removes the backup and login.
+- **Privacy policy** page in the app and at https://lean-muscle-guide.expo.app/privacy.html (`npm run privacy` regenerates it).
+- Fixed on the web version: the Coach screen and Today's weight row were slightly wider than an iPhone screen, so the chat slid sideways after a reply (text inputs can now shrink in rows). The version line in Me no longer says "test build".
+- iOS build number 1, Android versionCode 2; `eas.json` production profile; `docs/APP_STORE.md` for the listing and review notes.
+- New end-to-end check (web build, mock AI, real API): edit food, Coach Add with a JSON-refusing model, Add to log…, two photos, privacy page, create and delete account, no sideways overflow on any screen.
+- Tests: reminder planner (`npm test` in `mobile/`, now in CI) and account deletion on the server (49 in total).
+
 ## 1.0.0 (2026-10-30) — first public release
 
 - **Live:** Android APK through EAS Build (internal distribution link), and a web version for iPhone and any browser at https://lean-muscle-guide.expo.app (EAS Hosting).

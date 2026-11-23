@@ -2,7 +2,7 @@
   "expo": {
     "name": "Lean Muscle Guide",
     "slug": "lean-muscle-guide",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "leanmuscleguide",
@@ -13,7 +13,8 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "infoPlist": {}
+      "infoPlist": {},
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.leanmuscleguide.app",
@@ -26,7 +27,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "output": "single",
@@ -45,8 +47,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Take a photo of your meal so your AI can estimate its calories.",
-          "photosPermission": "Choose a photo of your meal so your AI can estimate its calories."
+          "cameraPermission": "Take a photo of a meal or a nutrition label so your AI can estimate calories and nutrients.",
+          "photosPermission": "Choose a photo of a meal or a nutrition label so your AI can estimate calories and nutrients."
         }
       ],
       [

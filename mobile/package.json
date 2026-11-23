@@ -1,6 +1,6 @@
 {
   "name": "lean-muscle-guide",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -37,7 +37,8 @@
     "typecheck": "tsc --noEmit",
     "build:web": "expo export --platform web",
     "build:apk": "npx eas-cli@latest build -p android --profile preview",
-    "test": "node --experimental-strip-types --no-warnings tests/reminders.test.mjs"
+    "test": "node --experimental-strip-types --no-warnings tests/reminders.test.mjs",
+    "privacy": "node --experimental-strip-types --no-warnings scripts/privacy-html.mjs"
   },
   "private": true
 }
