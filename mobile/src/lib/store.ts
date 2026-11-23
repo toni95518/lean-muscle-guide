@@ -75,6 +75,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
+  photos?: string[]; // local image URIs shown in the chat (the images themselves are sent to the AI once)
   actions?: CoachAction[];
   doneActions?: number[]; // indexes of actions the user added
   at: number;

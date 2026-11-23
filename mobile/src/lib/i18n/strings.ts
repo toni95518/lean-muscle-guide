@@ -207,6 +207,10 @@ const en = {
   "coach.add": "Add",
   "coach.addedShort": "Added ✓",
   "coach.toLog": "Add to log…",
+  "coach.photoOnly": "Here's a photo. What is it, and can you add it?",
+  "coach.photoHint": "Add a nutrition label for exact numbers.",
+  "coach.photoRemove": "Remove photo",
+  "coach.photoA11y": "Attached photo",
   "coach.added": "Added to {date}",
 
   "trends.title": "Trends",
@@ -601,6 +605,10 @@ const zh: Table = {
   "coach.add": "添加",
   "coach.addedShort": "已添加 ✓",
   "coach.toLog": "加入日志…",
+  "coach.photoOnly": "这是一张照片，帮我识别并加入记录。",
+  "coach.photoHint": "加一张营养成分表，数字会更准。",
+  "coach.photoRemove": "移除照片",
+  "coach.photoA11y": "附加的照片",
   "coach.added": "已添加到{date}",
 
   "trends.title": "趋势",
@@ -994,6 +1002,10 @@ const fr: Table = {
   "coach.add": "Ajouter",
   "coach.addedShort": "Ajouté ✓",
   "coach.toLog": "Ajouter au journal…",
+  "coach.photoOnly": "Voici une photo. Qu'est-ce que c'est, et peux-tu l'ajouter ?",
+  "coach.photoHint": "Ajoutez l'étiquette nutritionnelle pour des chiffres exacts.",
+  "coach.photoRemove": "Retirer la photo",
+  "coach.photoA11y": "Photo jointe",
   "coach.added": "Ajouté à {date}",
 
   "trends.title": "Tendances",
@@ -1387,6 +1399,10 @@ const de: Table = {
   "coach.add": "Hinzufügen",
   "coach.addedShort": "Hinzugefügt ✓",
   "coach.toLog": "Ins Tagebuch…",
+  "coach.photoOnly": "Hier ist ein Foto. Was ist das, und kannst du es eintragen?",
+  "coach.photoHint": "Füg das Nährwert-Etikett hinzu für genaue Zahlen.",
+  "coach.photoRemove": "Foto entfernen",
+  "coach.photoA11y": "Angehängtes Foto",
   "coach.added": "Zu {date} hinzugefügt",
 
   "trends.title": "Verlauf",

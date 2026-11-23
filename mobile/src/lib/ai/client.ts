@@ -8,7 +8,10 @@ export interface AiMessage {
   role: "user" | "assistant";
   text: string;
   imageBase64?: string; // JPEG, without the data: prefix
+  imagesBase64?: string[]; // several JPEGs (Coach: a meal plus its nutrition label)
 }
+
+const imagesOf = (m: AiMessage) => [...(m.imageBase64 ? [m.imageBase64] : []), ...(m.imagesBase64 ?? [])];
 export interface AiRequest {
   system: string;
   messages: AiMessage[];
@@ -76,7 +79,7 @@ export async function complete(cfg: AiConfig, key: string | null, req: AiRequest
   if (!key) throw new AiError("no_key", "no_key");
   const info = providerInfo(cfg.provider);
   const base = trimSlash(cfg.baseUrl || info.baseUrl);
-  const hasImage = req.messages.some((m) => m.imageBase64);
+  const hasImage = req.messages.some((m) => imagesOf(m).length > 0);
   if (hasImage && !info.images && cfg.provider !== "custom") throw new AiError("no_image", "no_image");
 
   if (info.kind === "anthropic") {
@@ -87,7 +90,7 @@ export async function complete(cfg: AiConfig, key: string | null, req: AiRequest
       messages: req.messages.map((m) => ({
         role: m.role,
         content: [
-          ...(m.imageBase64 ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: m.imageBase64 } }] : []),
+          ...imagesOf(m).map((data) => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data } })),
           { type: "text", text: m.text },
         ],
       })),
@@ -101,12 +104,12 @@ export async function complete(cfg: AiConfig, key: string | null, req: AiRequest
   const messages = [
     { role: "system", content: req.system },
     ...req.messages.map((m) =>
-      m.imageBase64
+      imagesOf(m).length
         ? {
             role: m.role,
             content: [
               { type: "text", text: m.text },
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${m.imageBase64}` } },
+              ...imagesOf(m).map((b64) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${b64}` } })),
             ],
           }
         : { role: m.role, content: m.text },

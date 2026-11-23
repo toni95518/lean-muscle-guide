@@ -91,6 +91,7 @@ export function coachSystemPrompt(lang: Lang, ctx: CoachContext): string {
     nutrientLines(ctx.profile, todayDay),
     ctx.favorites.length ? `Saved favorites: ${ctx.favorites.map((f) => `${f.name} (${f.kcal} kcal)`).join("; ")}` : "",
     "",
+    "The user may attach photos: a meal, a product, or a nutrition facts label. Read a label's numbers exactly (per serving or per 100 g) and scale them to the amount the user says they ate; if they don't say, assume one serving and say so. Combine what the photos show with what the user writes.",
     "You can propose changes to the log. The user must tap to add them; you never add anything yourself, so never say you logged something.",
     "Reply ONLY with JSON in this shape:",
     `{"reply":"your message","actions":[{"type":"add_food","date":"${ctx.today}","meal":"dinner","items":[{"name":"Baked salmon","portion":"150 g","kcal":312,"protein":34,"carbs":0,"fat":19}]},{"type":"add_exercise","date":"${ctx.today}","items":[{"name":"Running","minutes":30,"kcal":350}]}]}`,

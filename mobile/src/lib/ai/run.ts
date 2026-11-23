@@ -35,12 +35,13 @@ export async function analyzeLog(cfg: AiConfig, lang: Lang, weightKg: number, in
 }
 
 /** One coach turn, with the recent conversation for context. */
-export async function coachTurn(cfg: AiConfig, lang: Lang, ctx: CoachContext, history: ChatMessage[], message: string) {
+export async function coachTurn(cfg: AiConfig, lang: Lang, ctx: CoachContext, history: ChatMessage[], message: string, photosBase64: string[] = []) {
   const key = await keyOrThrow();
-  const recent = history.slice(-10).map((m) => ({ role: m.role, text: m.text }));
+  // Earlier photos aren't sent again (cost); the model sees a marker that one was there.
+  const recent = history.slice(-10).map((m) => ({ role: m.role, text: m.photos?.length ? `[${m.photos.length} photo(s)] ${m.text}` : m.text }));
   const reply = await complete(cfg, key, {
     system: coachSystemPrompt(lang, ctx),
-    messages: [...recent, { role: "user" as const, text: message }],
+    messages: [...recent, { role: "user" as const, text: message, imagesBase64: photosBase64 }],
     maxTokens: 1200,
     json: true,
   });
