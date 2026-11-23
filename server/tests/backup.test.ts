@@ -81,6 +81,19 @@ describe("backup", () => {
     expect(res.body.bytes).toBeGreaterThan(100 * 1024);
   });
 
+  it("deleting the account removes its backup and its login", async () => {
+    const email = `gone${Date.now()}@example.com`;
+    const reg = await api().post("/api/auth/register").send({ email, password: "correct horse" });
+    const auth = { Authorization: `Bearer ${reg.body.token}` };
+    await api().put("/api/backup").set(auth).send({ data: snapshot(1) });
+    const id = (await api().get("/api/me").set(auth)).body.user.id;
+    expect((await api().delete("/api/me").set(auth)).status).toBe(204);
+    expect((await api().get("/api/backup").set(auth)).status).toBe(404); // backup gone (the app also discards the token)
+    expect((await api().post("/api/auth/login").send({ email, password: "correct horse" })).status).toBe(401);
+    const left = await pool.query("select count(*)::int as n from backups where user_id = $1", [id]);
+    expect(left.rows[0].n).toBe(0);
+  });
+
   it("deletes the backup", async () => {
     const auth = await signUp();
     await api().put("/api/backup").set(auth).send({ data: snapshot(1) });

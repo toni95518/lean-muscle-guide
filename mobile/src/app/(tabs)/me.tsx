@@ -125,6 +125,7 @@ export default function Me() {
         <Text style={T.small}>{t("me.version", { v: version })}</Text>
         <Text style={T.small}>{t("me.privacy")}</Text>
         <Text style={T.small}>{t("me.disclaimer")}</Text>
+        <Btn kind="link" small label={t("me.privacyPolicy")} onPress={() => router.push("/privacy")} style={{ alignSelf: "flex-start" }} />
         {confirmErase ? (
           <View style={{ gap: 8 }}>
             <Text style={{ color: C.danger }}>{t("me.eraseConfirm")}</Text>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useToast } from "../components/toast";
 import { Btn, Card, Field, Header, Notice, Screen, Seg, s } from "../components/ui";
-import { AccountError, DEFAULT_SERVER, downloadBackup, signIn, uploadBackup } from "../lib/account";
+import { AccountError, DEFAULT_SERVER, deleteAccount, downloadBackup, signIn, uploadBackup } from "../lib/account";
 import { getSecret, SECRET, setSecret } from "../lib/secrets";
 import * as store from "../lib/store";
 import { C, T } from "../lib/theme";
@@ -18,9 +18,10 @@ export default function AccountScreen() {
   const [server, setServer] = useState(acct?.serverUrl ?? DEFAULT_SERVER);
   const [email, setEmail] = useState(acct?.email ?? "");
   const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState<"" | "sign" | "up" | "down">("");
+  const [busy, setBusy] = useState<"" | "sign" | "up" | "down" | "del">("");
   const [error, setError] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [advanced, setAdvanced] = useState(false);
   const [hasToken, setHasToken] = useState(false);
 
@@ -99,6 +100,20 @@ export default function AccountScreen() {
     setBusy("");
   };
 
+  const removeAccount = async () => {
+    setError(null);
+    setConfirmDelete(false);
+    setBusy("del");
+    await withToken(async (token) => {
+      await deleteAccount(acct!.serverUrl, token);
+      await setSecret(SECRET.accountToken, null);
+      setHasToken(false);
+      await app.updateSettings({ account: null });
+      toast.show(t("acct.deleted"));
+    });
+    setBusy("");
+  };
+
   const signOut = async () => {
     await setSecret(SECRET.accountToken, null);
     setHasToken(false);
@@ -133,6 +148,17 @@ export default function AccountScreen() {
             <Btn kind="soft" label={t("acct.restore")} loading={busy === "down"} onPress={() => setConfirmRestore(true)} />
           )}
           <Btn kind="link" small label={t("acct.signOut")} onPress={signOut} style={{ alignSelf: "flex-start" }} />
+          {confirmDelete ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: C.danger }}>{t("acct.deleteConfirm")}</Text>
+              <View style={s.row}>
+                <Btn kind="danger" small label={t("acct.deleteYes")} loading={busy === "del"} onPress={removeAccount} />
+                <Btn kind="ghost" small label={t("common.cancel")} onPress={() => setConfirmDelete(false)} />
+              </View>
+            </View>
+          ) : (
+            <Btn kind="link" small label={t("acct.delete")} onPress={() => setConfirmDelete(true)} style={{ alignSelf: "flex-start" }} />
+          )}
         </Card>
       ) : (
         <Card>

@@ -28,6 +28,7 @@ function Gate() {
       <Stack.Screen name="add" options={{ presentation: "modal" }} />
       <Stack.Screen name="account" options={{ presentation: "modal" }} />
       <Stack.Screen name="edit-food" options={{ presentation: "modal" }} />
+      <Stack.Screen name="privacy" options={{ presentation: "modal" }} />
     </Stack>
   );
 }

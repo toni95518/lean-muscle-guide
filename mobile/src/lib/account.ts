@@ -39,6 +39,11 @@ export async function uploadBackup(server: string, token: string, data: Snapshot
   return r.updatedAt as string;
 }
 
+/** Deletes the account and its backup on the server (App Store guideline 5.1.1(v)). The phone's own log stays. */
+export async function deleteAccount(server: string, token: string): Promise<void> {
+  await req(server, "/me", { method: "DELETE", token });
+}
+
 export async function downloadBackup(server: string, token: string): Promise<{ data: Snapshot; updatedAt: string }> {
   return req(server, "/backup", { method: "GET", token });
 }
