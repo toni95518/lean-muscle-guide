@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { isDateKey, range, today } from "./dates";
 import { DEFAULT_PROFILE, type Profile } from "./nutrition";
 import { NUTRIENT_IDS, type Micros } from "./nutrients";
+import type { ReminderSettings } from "./reminders/plan";
 
 export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
 export const MEALS: Meal[] = ["breakfast", "lunch", "dinner", "snack"];
@@ -70,6 +71,7 @@ export interface Settings {
   language: Lang | null; // null = follow the phone
   ai: AiConfig | null; // the key itself is in secure storage (lib/secrets.ts)
   account: Account | null;
+  reminders?: Partial<ReminderSettings>; // missing = reminders off (see lib/reminders/plan.ts for defaults)
 }
 export interface ChatMessage {
   id: string;

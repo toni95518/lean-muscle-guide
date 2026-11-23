@@ -1,12 +1,13 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Linking, Pressable, Switch, Text, TextInput, View } from "react-native";
 import { IconNext } from "../../components/icons";
 import { useToast } from "../../components/toast";
-import { Btn, Card, Chips, Field, Header, Screen, SectionTitle, Seg, s } from "../../components/ui";
+import { Btn, Card, Chips, Field, Header, Screen, SectionTitle, Seg, Stepper, s } from "../../components/ui";
 import { providerInfo } from "../../lib/ai/providers";
-import { LANGS } from "../../lib/i18n";
+import { LANGS, LOCALE } from "../../lib/i18n";
+import { askPermission, getPermission, remindersSupported, sendTest, shiftTime, syncReminders, withDefaults, type MealKey, type ReminderSettings, type TimeSetting } from "../../lib/reminders";
 import { fmtAmount, NUTRIENTS, type NutrientId } from "../../lib/nutrients";
 import { ACTIVITY_LEVELS, fromDisplayWeight, liters, PROTEIN_LEVELS, toDisplayWeight, WEIGHT_LABEL, type Goal, type Sex, type WeightUnit } from "../../lib/nutrition";
 import * as store from "../../lib/store";
@@ -104,6 +105,8 @@ export default function Me() {
         <Btn label={t("me.save")} onPress={save} />
       </Card>
 
+      <ReminderSettingsCard />
+
       <NutrientSettings />
 
       <Card>
@@ -190,6 +193,100 @@ function NutrientTarget({ label, unit, initial, placeholder, onSave }: { label: 
         <Text style={s.suffix} pointerEvents="none">{unit}</Text>
       </View>
     </View>
+  );
+}
+
+/** Reminders: local notifications that open the right screen when tapped. */
+function ReminderSettingsCard() {
+  const app = useApp();
+  const { t, lang, settings, goals, rev } = app;
+  const toast = useToast();
+  const r = withDefaults(settings.reminders);
+  const [perm, setPerm] = useState<"granted" | "denied" | "undetermined">("undetermined");
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (remindersSupported) getPermission().then(setPerm);
+  }, []);
+  useEffect(() => {
+    if (remindersSupported && r.enabled && perm === "granted") syncReminders(settings.reminders, t, lang, goals.water).then(setCount).catch(() => setCount(null));
+  }, [settings.reminders, perm, rev]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!remindersSupported) {
+    return (
+      <Card>
+        <SectionTitle>{t("rem.title")}</SectionTitle>
+        <Text style={T.small}>{t("rem.webOnly")}</Text>
+      </Card>
+    );
+  }
+
+  const save = (next: ReminderSettings) => app.updateSettings({ reminders: next });
+  const toggleAll = async (on: boolean) => {
+    if (on) {
+      const p = perm === "granted" ? "granted" : await askPermission();
+      setPerm(p);
+      if (p !== "granted") return;
+    }
+    await save({ ...r, enabled: on });
+  };
+  const time = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return new Intl.DateTimeFormat(LOCALE[lang], { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, h, m));
+  };
+  const timeRow = (label: string, v: TimeSetting, set: (v: TimeSetting) => void, extra?: ReactNode) => (
+    <View style={{ gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: C.sunk }}>
+      <View style={[s.row, { justifyContent: "space-between" }]}>
+        <Text style={{ fontSize: 15, fontWeight: "600", color: C.ink, flex: 1 }}>{label}</Text>
+        <Switch value={v.on} onValueChange={(on) => set({ ...v, on })} accessibilityLabel={label} trackColor={{ true: C.accent }} />
+      </View>
+      {v.on ? (
+        <View style={[s.row, { justifyContent: "space-between" }]}>
+          {extra ?? <View />}
+          <Stepper value={time(v.time)} labelMinus={t("rem.earlier")} labelPlus={t("rem.later")}
+            onMinus={() => set({ ...v, time: shiftTime(v.time, -15) })} onPlus={() => set({ ...v, time: shiftTime(v.time, 15) })} />
+        </View>
+      ) : null}
+    </View>
+  );
+  const meal = (m: MealKey) => timeRow(t(`meal.${m}`), r.meals[m], (v) => save({ ...r, meals: { ...r.meals, [m]: v } }));
+  const weekdays = [1, 2, 3, 4, 5, 6, 0].map((d) => [d, new Intl.DateTimeFormat(LOCALE[lang], { weekday: "short" }).format(new Date(2024, 0, 7 + d))] as [number, string]);
+
+  return (
+    <Card>
+      <View style={[s.row, { justifyContent: "space-between" }]}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <SectionTitle>{t("rem.title")}</SectionTitle>
+          <Text style={T.small}>{t("rem.sub")}</Text>
+        </View>
+        <Switch value={r.enabled && perm === "granted"} onValueChange={toggleAll} accessibilityLabel={t("rem.title")} trackColor={{ true: C.accent }} />
+      </View>
+      {perm === "denied" ? (
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: C.danger }}>{t("rem.denied")}</Text>
+          <Btn kind="soft" small label={t("rem.openSettings")} onPress={() => Linking.openSettings()} style={{ alignSelf: "flex-start" }} />
+        </View>
+      ) : null}
+      {r.enabled && perm === "granted" ? (
+        <View>
+          {meal("breakfast")}
+          {meal("lunch")}
+          {meal("dinner")}
+          <View style={{ gap: 4, paddingVertical: 8, borderTopWidth: 1, borderTopColor: C.sunk }}>
+            <View style={[s.row, { justifyContent: "space-between" }]}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: C.ink, flex: 1 }}>{t("rem.water")}</Text>
+              <Switch value={r.water.on} onValueChange={(on) => save({ ...r, water: { ...r.water, on } })} accessibilityLabel={t("rem.water")} trackColor={{ true: C.accent }} />
+            </View>
+            {r.water.on ? <Text style={T.small}>{r.water.times.map(time).join(" · ")} · {t("rem.waterSkip")}</Text> : null}
+          </View>
+          {timeRow(t("rem.evening"), r.evening, (v) => save({ ...r, evening: v }))}
+          {timeRow(t("rem.weighIn"), r.weighIn, (v) => save({ ...r, weighIn: { ...r.weighIn, ...v } }),
+            <Seg label={t("rem.weighIn")} options={weekdays} value={r.weighIn.weekday} onChange={(d) => save({ ...r, weighIn: { ...r.weighIn, weekday: d } })} />)}
+          <Text style={T.small}>{count != null ? t("rem.planned", { n: count }) : ""} {t("rem.skipNote")}</Text>
+          <Btn kind="link" small label={t("rem.test")} onPress={async () => { await sendTest(t); toast.show(t("rem.testSent")); }} style={{ alignSelf: "flex-start" }} />
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
