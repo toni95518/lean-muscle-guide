@@ -152,7 +152,8 @@ export default function Today() {
             <SectionTitle right={items.length ? <Text style={[T.num, { color: C.muted }]}>{f.int(sum)} kcal</Text> : undefined}>{t(`meal.${m}`)}</SectionTitle>
             {items.length ? (
               items.map((e, i) => (
-                <Pressable key={e.id} onLongPress={() => toggleFavorite(e)} delayLongPress={350} accessibilityHint={t("today.longPressHint")}
+                <Pressable key={e.id} onPress={() => router.push({ pathname: "/edit-food", params: { date, id: e.id } })} onLongPress={() => toggleFavorite(e)} delayLongPress={350}
+                  accessibilityRole="button" accessibilityLabel={`${app.food(e.name, e.libraryName)}, ${f.int(e.kcal * e.quantity)} kcal`} accessibilityHint={t("today.longPressHint")}
                   style={[s.row, { paddingVertical: 8, borderTopWidth: i ? 1 : 0, borderTopColor: C.sunk }]}>
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <View style={s.row}>

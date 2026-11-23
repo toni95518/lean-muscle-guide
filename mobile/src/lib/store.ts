@@ -182,6 +182,17 @@ export function addFoods(date: string, meal: Meal, source: Source, items: NewFoo
     ],
   }));
 }
+/** Fixes a logged food (name, portion, numbers, meal). A renamed library food shows the typed name. */
+export const updateFood = (date: string, id: string, patch: Partial<Omit<FoodEntry, "id" | "createdAt" | "source">>) =>
+  mutate(date, (d) => ({
+    ...d,
+    food: d.food.map((f) => {
+      if (f.id !== id) return f;
+      const next = { ...f, ...patch };
+      if (patch.name !== undefined && patch.name !== f.name) delete next.libraryName;
+      return next;
+    }),
+  }));
 export const removeFood = (date: string, id: string) => mutate(date, (d) => ({ ...d, food: d.food.filter((f) => f.id !== id) }));
 export const restoreFood = (date: string, entry: FoodEntry) => mutate(date, (d) => ({ ...d, food: [...d.food, entry].sort((a, b) => a.createdAt - b.createdAt) }));
 
